@@ -6,7 +6,19 @@ fn main() {
     // Construct a single channel controller. Note that the
     // Controller is initialized by default and is cleaned up on drop
 
-    let mut controller = ControllerBuilder::new()
+    let mut controller = create_led_controller();
+
+    let leds = controller.leds_mut(0);
+
+    for led in leds {
+        *led = [255, 0, 255, 0];
+    }
+
+    controller.render().unwrap();
+}
+
+fn create_led_controller() -> rs_ws281x::Controller {
+    return ControllerBuilder::new()
         .freq(800_000)
         .dma(10)
         .channel(
@@ -14,18 +26,10 @@ fn main() {
             ChannelBuilder::new()
                 .pin(18) // GPIO 10 = SPI0 MOSI
                 .count(60*6) // Number of LEDs
-                .strip_type(StripType::Ws2811Rgb)
-                .brightness(20) // default: 255
+                .strip_type(StripType::Ws2811Gbr)
+                .brightness(25) // default: 255
                 .build(),
         )
         .build()
         .unwrap();
-
-    let leds = controller.leds_mut(0);
-
-    for led in leds {
-        *led = [0, 0, 255, 0];
-    }
-
-    controller.render().unwrap();
 }
