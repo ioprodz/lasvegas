@@ -22,10 +22,7 @@
             background: #1a1a2e;
             border-bottom: 1px solid #2a2a4a;
         }
-        nav h1 {
-            font-size: 1.2rem;
-            margin-right: 2rem;
-        }
+        nav h1 { font-size: 1.2rem; margin-right: 2rem; }
         nav button {
             padding: 0.5rem 1.2rem;
             background: transparent;
@@ -35,11 +32,7 @@
             cursor: pointer;
             font-size: 0.9rem;
         }
-        nav button.active {
-            background: #2d2d5e;
-            color: #fff;
-            border-color: #5555aa;
-        }
+        nav button.active { background: #2d2d5e; color: #fff; border-color: #5555aa; }
         nav button:hover { border-color: #5555aa; color: #ccc; }
         #status {
             margin-left: auto;
@@ -59,7 +52,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-top: 1rem;
+            margin-top: 1.5rem;
         }
         .grid-label { color: #666; font-size: 0.8rem; margin-bottom: 0.5rem; }
         .grid {
@@ -77,12 +70,12 @@
             border-radius: 50%;
         }
 
-        /* Animation controls */
-        .animation-list {
+        /* Cards */
+        .card-list {
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
         .anim-card {
             background: #1a1a2e;
@@ -118,23 +111,64 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9rem;
-            margin-bottom: 2rem;
         }
         .stop-btn:hover { background: #8a3d3d; }
         .stop-btn:disabled { opacity: 0.4; cursor: default; }
+
+        /* Audio controls */
+        .audio-controls {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .audio-btn {
+            padding: 0.5rem 1.2rem;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            background: #1a1a2e;
+            color: #ccc;
+        }
+        .audio-btn:hover { border-color: #5555aa; }
+        .audio-btn.active { background: #2d6a4f; border-color: #4ecdc4; color: #fff; }
+        .audio-btn:disabled { opacity: 0.4; cursor: default; }
+
+        /* Frequency visualizer */
+        .visualizer-container {
+            margin-bottom: 1.5rem;
+        }
+        #freq-canvas {
+            background: #111;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .section-label {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        h2 { margin-bottom: 1rem; }
     </style>
 </head>
 <body>
     <nav>
         <h1>Las Vegas</h1>
         <button class="nav-btn active" data-page="animations">Animations</button>
+        <button class="nav-btn" data-page="audio">Audio</button>
         <div id="status" class="disconnected">Disconnected</div>
     </nav>
 
     <!-- Animations Page -->
     <div id="page-animations" class="page active">
-        <h2 style="margin-bottom: 1rem;">Animations</h2>
-        <div class="animation-list">
+        <h2>Animations</h2>
+        <div class="card-list" id="basic-anims">
             <div class="anim-card" data-anim="rainbow">
                 <h3>Rainbow Cycle</h3>
                 <p>Smooth rotating rainbow across all LEDs. Full spectrum.</p>
@@ -156,6 +190,45 @@
         </div>
     </div>
 
+    <!-- Audio Page -->
+    <div id="page-audio" class="page">
+        <h2>Audio Reactive</h2>
+
+        <div class="section-label">Audio Source</div>
+        <div class="audio-controls">
+            <button class="audio-btn" id="btn-mic">Microphone</button>
+            <button class="audio-btn" id="btn-system">System Audio (Tab)</button>
+            <button class="audio-btn" id="btn-stop-audio" disabled>Stop Audio</button>
+        </div>
+
+        <div class="visualizer-container">
+            <div class="section-label">Frequency Bands</div>
+            <canvas id="freq-canvas" width="400" height="120"></canvas>
+        </div>
+
+        <div class="section-label">Audio Animations</div>
+        <div class="card-list" id="audio-anims">
+            <div class="anim-card" data-anim="audio_spectrum">
+                <h3>Spectrum</h3>
+                <p>Frequency bands as colored bars across the strip. Bass=red, treble=blue.</p>
+            </div>
+            <div class="anim-card" data-anim="audio_pulse">
+                <h3>Audio Pulse</h3>
+                <p>Whole strip pulses with bass. Color shifts with treble energy.</p>
+            </div>
+            <div class="anim-card" data-anim="audio_chase">
+                <h3>Audio Chase</h3>
+                <p>Light chases around the strip. Speed from bass, color from dominant frequency.</p>
+            </div>
+        </div>
+        <button class="stop-btn" id="stop-btn-audio" disabled>Stop Animation</button>
+
+        <div class="grid-container">
+            <div class="grid-label">LED Grid (60 x 6 = 360 LEDs)</div>
+            <div class="grid" id="grid-audio"></div>
+        </div>
+    </div>
+
     <script>
         // --- Navigation ---
         const navButtons = document.querySelectorAll('.nav-btn');
@@ -168,34 +241,39 @@
             });
         });
 
-        // --- LED Grid ---
-        const grid = document.getElementById('grid');
-        const leds = [];
-        for (let i = 0; i < 360; i++) {
-            const led = document.createElement('div');
-            led.className = 'led';
-            grid.appendChild(led);
-            leds.push(led);
+        // --- LED Grids ---
+        function createGrid(container) {
+            const gridLeds = [];
+            for (let i = 0; i < 360; i++) {
+                const led = document.createElement('div');
+                led.className = 'led';
+                container.appendChild(led);
+                gridLeds.push(led);
+            }
+            return gridLeds;
         }
 
+        const grids = [
+            createGrid(document.getElementById('grid')),
+            createGrid(document.getElementById('grid-audio')),
+        ];
+
         function updateGrid(data) {
-            // data: Uint8Array of [r, g, b, r, g, b, ...]
-            for (let i = 0; i < 360 && i * 3 + 2 < data.length; i++) {
-                const r = data[i * 3];
-                const g = data[i * 3 + 1];
-                const b = data[i * 3 + 2];
-                leds[i].style.background = `rgb(${r},${g},${b})`;
+            for (const gridLeds of grids) {
+                for (let i = 0; i < 360 && i * 3 + 2 < data.length; i++) {
+                    gridLeds[i].style.background = `rgb(${data[i*3]},${data[i*3+1]},${data[i*3+2]})`;
+                }
             }
         }
 
-        // --- Animation controls ---
-        const animCards = document.querySelectorAll('.anim-card');
-        const stopBtn = document.getElementById('stop-btn');
+        // --- Animation controls (shared across pages) ---
+        const allAnimCards = document.querySelectorAll('.anim-card');
+        const stopBtns = [document.getElementById('stop-btn'), document.getElementById('stop-btn-audio')];
         let currentAnim = null;
 
         function setActiveAnim(name) {
             currentAnim = name;
-            animCards.forEach(card => {
+            allAnimCards.forEach(card => {
                 card.classList.toggle('running', card.dataset.anim === name);
                 const badge = card.querySelector('.badge');
                 if (badge) badge.remove();
@@ -206,10 +284,10 @@
                     card.appendChild(b);
                 }
             });
-            stopBtn.disabled = !name;
+            stopBtns.forEach(btn => btn.disabled = !name);
         }
 
-        animCards.forEach(card => {
+        allAnimCards.forEach(card => {
             card.addEventListener('click', () => {
                 const name = card.dataset.anim;
                 if (ws && ws.readyState === WebSocket.OPEN) {
@@ -219,12 +297,151 @@
             });
         });
 
-        stopBtn.addEventListener('click', () => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('stop');
-                setActiveAnim(null);
-            }
+        stopBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send('stop');
+                    setActiveAnim(null);
+                }
+            });
         });
+
+        // --- Audio Capture & Analysis ---
+        let audioCtx = null;
+        let analyser = null;
+        let audioSource = null;
+        let audioStream = null;
+        let audioInterval = null;
+
+        const BAND_RANGES = [
+            [0, 2],       // Sub-bass  ~0-86Hz
+            [2, 6],       // Bass      ~86-258Hz
+            [6, 12],      // Low-mid   ~258-516Hz
+            [12, 23],     // Mid       ~516-990Hz
+            [23, 46],     // Upper-mid ~990-1978Hz
+            [46, 93],     // Presence  ~1978-4000Hz
+            [93, 139],    // Brilliance ~4000-5984Hz
+            [139, 232],   // Treble    ~5984-10000Hz
+        ];
+
+        function computeBands(freqData) {
+            const bands = new Uint8Array(8);
+            for (let b = 0; b < 8; b++) {
+                const [start, end] = BAND_RANGES[b];
+                let sum = 0;
+                for (let i = start; i < end && i < freqData.length; i++) {
+                    sum += freqData[i];
+                }
+                bands[b] = Math.min(255, Math.round(sum / (end - start)));
+            }
+            return bands;
+        }
+
+        async function startAudio(mode) {
+            stopAudio();
+
+            try {
+                if (mode === 'mic') {
+                    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                } else {
+                    audioStream = await navigator.mediaDevices.getDisplayMedia({
+                        audio: true,
+                        video: { width: 1, height: 1 } // minimal video (required by Chrome)
+                    });
+                    // Discard video track
+                    audioStream.getVideoTracks().forEach(t => t.stop());
+                }
+
+                audioCtx = new AudioContext();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.8;
+
+                audioSource = audioCtx.createMediaStreamSource(audioStream);
+                audioSource.connect(analyser);
+
+                const freqData = new Uint8Array(analyser.frequencyBinCount);
+
+                audioInterval = setInterval(() => {
+                    analyser.getByteFrequencyData(freqData);
+                    const bands = computeBands(freqData);
+
+                    // Draw visualizer
+                    drawVisualizer(bands);
+
+                    // Send to server
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        const msg = new Uint8Array(1 + bands.length);
+                        msg[0] = 0x02;
+                        msg.set(bands, 1);
+                        ws.send(msg.buffer);
+                    }
+                }, 33); // ~30Hz
+
+                document.getElementById('btn-mic').classList.toggle('active', mode === 'mic');
+                document.getElementById('btn-system').classList.toggle('active', mode === 'system');
+                document.getElementById('btn-stop-audio').disabled = false;
+
+            } catch (err) {
+                console.error('Audio capture failed:', err);
+            }
+        }
+
+        function stopAudio() {
+            if (audioInterval) clearInterval(audioInterval);
+            if (audioSource) audioSource.disconnect();
+            if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+            if (audioCtx) audioCtx.close();
+            audioCtx = null;
+            analyser = null;
+            audioSource = null;
+            audioStream = null;
+            audioInterval = null;
+
+            document.getElementById('btn-mic').classList.remove('active');
+            document.getElementById('btn-system').classList.remove('active');
+            document.getElementById('btn-stop-audio').disabled = true;
+
+            // Clear visualizer
+            const canvas = document.getElementById('freq-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Visualizer
+        const bandLabels = ['Sub', 'Bass', 'Low', 'Mid', 'UMid', 'Pres', 'Bril', 'Treb'];
+        const bandColors = [
+            '#ff0000', '#ff4400', '#ff8800', '#44ff00',
+            '#00ffaa', '#0088ff', '#4400ff', '#aa00ff'
+        ];
+
+        function drawVisualizer(bands) {
+            const canvas = document.getElementById('freq-canvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const barW = (w - 40) / 8;
+            const gap = 4;
+
+            for (let i = 0; i < 8; i++) {
+                const x = 20 + i * barW;
+                const barH = (bands[i] / 255) * (h - 25);
+
+                ctx.fillStyle = bandColors[i];
+                ctx.fillRect(x + gap/2, h - 20 - barH, barW - gap, barH);
+
+                ctx.fillStyle = '#666';
+                ctx.font = '10px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(bandLabels[i], x + barW/2, h - 5);
+            }
+        }
+
+        document.getElementById('btn-mic').addEventListener('click', () => startAudio('mic'));
+        document.getElementById('btn-system').addEventListener('click', () => startAudio('system'));
+        document.getElementById('btn-stop-audio').addEventListener('click', stopAudio);
 
         // --- WebSocket ---
         const statusEl = document.getElementById('status');

@@ -49,12 +49,8 @@ pub fn start(
                         }
                     }
                     Message::Binary(data) => {
-                        if data.len() >= 4 {
-                            let _ = cmd_tx.send(Command::SetColor {
-                                r: data[1],
-                                g: data[2],
-                                b: data[3],
-                            });
+                        if let Some(cmd) = parse_binary(&data) {
+                            let _ = cmd_tx.send(cmd);
                         }
                     }
                 },
@@ -76,5 +72,22 @@ fn parse_command(text: &str) -> Option<Command> {
         })
     } else {
         None
+    }
+}
+
+fn parse_binary(data: &[u8]) -> Option<Command> {
+    if data.is_empty() {
+        return None;
+    }
+    match data[0] {
+        0x01 if data.len() >= 4 => Some(Command::SetColor {
+            r: data[1],
+            g: data[2],
+            b: data[3],
+        }),
+        0x02 if data.len() >= 2 => Some(Command::AudioData {
+            bands: data[1..].to_vec(),
+        }),
+        _ => None,
     }
 }

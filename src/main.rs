@@ -25,6 +25,7 @@ fn main() {
     // Main loop: owns the LED controller, runs animations
     let mut active_animation: Option<String> = None;
     let mut frame: usize = 0;
+    let mut audio_bands: [u8; 8] = [0; 8];
     let frame_duration = Duration::from_millis(16); // ~60fps
 
     loop {
@@ -47,9 +48,15 @@ fn main() {
                 Command::StopAnimation => {
                     println!("Stopping animation");
                     active_animation = None;
+                    audio_bands = [0; 8];
                     hardware::led::set_all(controller, [0, 0, 0, 0]);
                     let state = hardware::led::read_state(controller);
                     let _ = state_tx.send(StateUpdate::LedState(state));
+                }
+                Command::AudioData { bands } => {
+                    for (i, &b) in bands.iter().enumerate().take(8) {
+                        audio_bands[i] = b;
+                    }
                 }
             }
         }
@@ -60,6 +67,9 @@ fn main() {
                 "rainbow" => hardware::animation::rainbow_cycle(controller, frame),
                 "pulse" => hardware::animation::pulse(controller, frame),
                 "chase" => hardware::animation::color_chase(controller, frame),
+                "audio_spectrum" => hardware::animation::audio_spectrum(controller, &audio_bands),
+                "audio_pulse" => hardware::animation::audio_pulse(controller, &audio_bands),
+                "audio_chase" => hardware::animation::audio_chase(controller, frame, &audio_bands),
                 _ => {}
             }
             frame = frame.wrapping_add(1);

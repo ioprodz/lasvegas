@@ -4,6 +4,7 @@ pub enum Command {
     SetColor { r: u8, g: u8, b: u8 },
     StartAnimation { name: String },
     StopAnimation,
+    AudioData { bands: Vec<u8> },
 }
 
 /// State updates sent from the main loop to WebSocket clients.
