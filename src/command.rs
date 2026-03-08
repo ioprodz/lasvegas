@@ -1,0 +1,14 @@
+/// Commands sent from WebSocket clients to the main loop.
+#[derive(Debug)]
+pub enum Command {
+    SetColor { r: u8, g: u8, b: u8 },
+    StartAnimation { name: String },
+    StopAnimation,
+}
+
+/// State updates sent from the main loop to WebSocket clients.
+#[derive(Debug, Clone)]
+pub enum StateUpdate {
+    /// Full LED state: flat array of [r, g, b, r, g, b, ...]
+    LedState(Vec<u8>),
+}

@@ -2,7 +2,7 @@ use rs_ws281x::{ChannelBuilder, ControllerBuilder, StripType};
 use std::thread::sleep;
 use std::time::Duration;
 
-const LED_COUNT: i32 = 60 * 6;
+pub const LED_COUNT: usize = 60 * 6;
 const GPIO_PIN: i32 = 18;
 const FREQUENCY: u32 = 800_000;
 const DMA_CHANNEL: i32 = 10;
@@ -15,7 +15,7 @@ pub fn create_controller() -> rs_ws281x::Controller {
             0,
             ChannelBuilder::new()
                 .pin(GPIO_PIN)
-                .count(LED_COUNT)
+                .count(LED_COUNT as i32)
                 .strip_type(StripType::Ws2811Gbr)
                 .brightness(255)
                 .build(),
@@ -32,43 +32,39 @@ pub fn set_all(controller: &mut rs_ws281x::Controller, color: [u8; 4]) {
     controller.render().unwrap();
 }
 
+/// Read current LED state as flat [r, g, b, r, g, b, ...] vec.
+pub fn read_state(controller: &mut rs_ws281x::Controller) -> Vec<u8> {
+    let leds = controller.leds_mut(0);
+    let mut state = Vec::with_capacity(leds.len() * 3);
+    for led in leds.iter() {
+        state.push(led[0]); // r
+        state.push(led[1]); // g
+        state.push(led[2]); // b
+    }
+    state
+}
+
 pub fn startup_animation(controller: &mut rs_ws281x::Controller) {
     println!("Running startup animation...");
-    let delay = Duration::from_millis(30);
-    let led_count = LED_COUNT as usize;
 
-    // 1. Sequential wipe in white — test each LED one by one
-    for i in 0..led_count {
+    // 1. Fast white wipe — 6 LEDs at a time (~300ms)
+    for i in (0..LED_COUNT).step_by(6) {
         let leds = controller.leds_mut(0);
-        leds[i] = [255, 255, 255, 0];
+        for j in i..(i + 6).min(LED_COUNT) {
+            leds[j] = [255, 255, 255, 0];
+        }
         controller.render().unwrap();
         sleep(Duration::from_millis(5));
     }
-    sleep(Duration::from_millis(200));
 
-    // 2. Full red at increasing brightness levels
-    for brightness in (0u8..=255).step_by(15) {
-        set_all(controller, [brightness, 0, 0, 0]);
-        sleep(delay);
+    // 2. R/G/B flash — quick full-color test (~600ms)
+    for &color in &[[255, 0, 0, 0], [0, 255, 0, 0], [0, 0, 255, 0]] {
+        set_all(controller, color);
+        sleep(Duration::from_millis(200));
     }
-    sleep(Duration::from_millis(200));
 
-    // 3. Full green at increasing brightness
-    for brightness in (0u8..=255).step_by(15) {
-        set_all(controller, [0, brightness, 0, 0]);
-        sleep(delay);
-    }
-    sleep(Duration::from_millis(200));
-
-    // 4. Full blue at increasing brightness
-    for brightness in (0u8..=255).step_by(15) {
-        set_all(controller, [0, 0, brightness, 0]);
-        sleep(delay);
-    }
-    sleep(Duration::from_millis(200));
-
-    // 5. Rainbow sweep — each LED gets a different hue, scrolls across
-    for offset in 0..360 {
+    // 3. Quick rainbow sweep (~1200ms)
+    for offset in (0..360).step_by(3) {
         let leds = controller.leds_mut(0);
         for (i, led) in leds.iter_mut().enumerate() {
             let hue = ((i + offset) % 360) as f32;
@@ -78,10 +74,10 @@ pub fn startup_animation(controller: &mut rs_ws281x::Controller) {
         sleep(Duration::from_millis(10));
     }
 
-    // 6. Fade out to black
-    for brightness in (0u8..=255).rev().step_by(5) {
+    // 4. Fast fade out (~500ms)
+    for brightness in (0u8..=255).rev().step_by(15) {
         set_all(controller, [brightness, brightness, brightness, 0]);
-        sleep(Duration::from_millis(15));
+        sleep(Duration::from_millis(20));
     }
 
     set_all(controller, [0, 0, 0, 0]);
