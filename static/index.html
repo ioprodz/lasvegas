@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Las Vegas LED Controller</title>
+    <style>
+        body {
+            background: #1a1a2e;
+            color: #eee;
+            font-family: system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        #status {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            margin-bottom: 2rem;
+        }
+        .connected { background: #2d6a4f; }
+        .disconnected { background: #6a2d2d; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(60, 8px);
+            gap: 1px;
+            padding: 1rem;
+            background: #111;
+            border-radius: 8px;
+        }
+        .led {
+            width: 8px;
+            height: 8px;
+            background: #333;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Las Vegas</h1>
+    <div id="status" class="disconnected">Disconnected</div>
+
+    <p>LED Grid (60 x 6 = 360 LEDs)</p>
+    <div class="grid" id="grid"></div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const status = document.getElementById('status');
+
+        // Render dummy LED grid
+        for (let i = 0; i < 360; i++) {
+            const led = document.createElement('div');
+            led.className = 'led';
+            grid.appendChild(led);
+        }
+
+        // WebSocket connection
+        const host = window.location.hostname;
+        const ws = new WebSocket(`ws://${host}:8080`);
+
+        ws.onopen = () => {
+            status.textContent = 'Connected';
+            status.className = 'connected';
+        };
+
+        ws.onclose = () => {
+            status.textContent = 'Disconnected';
+            status.className = 'disconnected';
+        };
+
+        ws.onmessage = (event) => {
+            console.log('Received:', event.data);
+        };
+    </script>
+</body>
+</html>
