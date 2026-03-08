@@ -3,85 +3,126 @@ use std::thread::sleep;
 use std::time::Duration;
 
 pub const LED_COUNT: usize = 60 * 6;
+const LEDS_PER_ROW: usize = 60;
 const GPIO_PIN: i32 = 18;
 const FREQUENCY: u32 = 800_000;
 const DMA_CHANNEL: i32 = 10;
 
-pub fn create_controller() -> rs_ws281x::Controller {
-    ControllerBuilder::new()
-        .freq(FREQUENCY)
-        .dma(DMA_CHANNEL)
-        .channel(
-            0,
-            ChannelBuilder::new()
-                .pin(GPIO_PIN)
-                .count(LED_COUNT as i32)
-                .strip_type(StripType::Ws2811Gbr)
-                .brightness(255)
-                .build(),
-        )
-        .build()
-        .unwrap()
+pub struct LedStrip {
+    controller: rs_ws281x::Controller,
 }
 
-pub fn set_all(controller: &mut rs_ws281x::Controller, color: [u8; 4]) {
-    let leds = controller.leds_mut(0);
-    for led in leds {
-        *led = color;
+impl LedStrip {
+    pub fn new() -> Self {
+        let controller = ControllerBuilder::new()
+            .freq(FREQUENCY)
+            .dma(DMA_CHANNEL)
+            .channel(
+                0,
+                ChannelBuilder::new()
+                    .pin(GPIO_PIN)
+                    .count(LED_COUNT as i32)
+                    .strip_type(StripType::Ws2811Gbr)
+                    .brightness(255)
+                    .build(),
+            )
+            .build()
+            .unwrap();
+        Self { controller }
     }
-    controller.render().unwrap();
-}
 
-/// Read current LED state as flat [r, g, b, r, g, b, ...] vec.
-pub fn read_state(controller: &mut rs_ws281x::Controller) -> Vec<u8> {
-    let leds = controller.leds_mut(0);
-    let mut state = Vec::with_capacity(leds.len() * 3);
-    for led in leds.iter() {
-        state.push(led[0]); // r
-        state.push(led[1]); // g
-        state.push(led[2]); // b
+    pub fn len(&self) -> usize {
+        LED_COUNT
     }
-    state
-}
 
-pub fn startup_animation(controller: &mut rs_ws281x::Controller) {
-    println!("Running startup animation...");
+    pub fn set(&mut self, index: usize, color: [u8; 4]) {
+        self.controller.leds_mut(0)[index] = color;
+    }
 
-    // 1. Fast white wipe — 6 LEDs at a time (~300ms)
-    for i in (0..LED_COUNT).step_by(6) {
-        let leds = controller.leds_mut(0);
-        for j in i..(i + 6).min(LED_COUNT) {
-            leds[j] = [255, 255, 255, 0];
+    pub fn set_all(&mut self, color: [u8; 4]) {
+        for led in self.controller.leds_mut(0) {
+            *led = color;
         }
-        controller.render().unwrap();
-        sleep(Duration::from_millis(5));
     }
 
-    // 2. R/G/B flash — quick full-color test (~600ms)
-    for &color in &[[255, 0, 0, 0], [0, 255, 0, 0], [0, 0, 255, 0]] {
-        set_all(controller, color);
-        sleep(Duration::from_millis(200));
-    }
-
-    // 3. Quick rainbow sweep (~1200ms)
-    for offset in (0..360).step_by(3) {
-        let leds = controller.leds_mut(0);
-        for (i, led) in leds.iter_mut().enumerate() {
-            let hue = ((i + offset) % 360) as f32;
-            *led = hsv_to_rgb(hue, 1.0, 1.0);
+    /// Render the current buffer to the hardware, applying zigzag correction.
+    pub fn render(&mut self) {
+        // Apply zigzag: reverse odd rows to match physical wiring
+        let leds = self.controller.leds_mut(0);
+        let num_rows = LED_COUNT / LEDS_PER_ROW;
+        for row in 0..num_rows {
+            if row % 2 == 1 {
+                let start = row * LEDS_PER_ROW;
+                let end = start + LEDS_PER_ROW;
+                leds[start..end].reverse();
+            }
         }
-        controller.render().unwrap();
-        sleep(Duration::from_millis(10));
+
+        self.controller.render().unwrap();
+
+        // Reverse back so the logical buffer stays in logical order
+        let leds = self.controller.leds_mut(0);
+        for row in 0..num_rows {
+            if row % 2 == 1 {
+                let start = row * LEDS_PER_ROW;
+                let end = start + LEDS_PER_ROW;
+                leds[start..end].reverse();
+            }
+        }
     }
 
-    // 4. Fast fade out (~500ms)
-    for brightness in (0u8..=255).rev().step_by(15) {
-        set_all(controller, [brightness, brightness, brightness, 0]);
-        sleep(Duration::from_millis(20));
+    /// Read current LED state as flat [r, g, b, r, g, b, ...] vec.
+    pub fn read_state(&mut self) -> Vec<u8> {
+        let leds = self.controller.leds_mut(0);
+        let mut state = Vec::with_capacity(leds.len() * 3);
+        for led in leds.iter() {
+            state.push(led[0]); // r
+            state.push(led[1]); // g
+            state.push(led[2]); // b
+        }
+        state
     }
 
-    set_all(controller, [0, 0, 0, 0]);
-    println!("Startup animation complete.");
+    pub fn startup_animation(&mut self) {
+        println!("Running startup animation...");
+
+        // 1. Fast white wipe — 6 LEDs at a time
+        for i in (0..LED_COUNT).step_by(6) {
+            for j in i..(i + 6).min(LED_COUNT) {
+                self.set(j, [255, 255, 255, 0]);
+            }
+            self.render();
+            sleep(Duration::from_millis(5));
+        }
+
+        // 2. R/G/B flash
+        for &color in &[[255, 0, 0, 0], [0, 255, 0, 0], [0, 0, 255, 0]] {
+            self.set_all(color);
+            self.render();
+            sleep(Duration::from_millis(200));
+        }
+
+        // 3. Quick rainbow sweep
+        for offset in (0..360).step_by(3) {
+            for i in 0..LED_COUNT {
+                let hue = ((i + offset) % 360) as f32;
+                self.set(i, hsv_to_rgb(hue, 1.0, 1.0));
+            }
+            self.render();
+            sleep(Duration::from_millis(10));
+        }
+
+        // 4. Fast fade out
+        for brightness in (0u8..=255).rev().step_by(15) {
+            self.set_all([brightness, brightness, brightness, 0]);
+            self.render();
+            sleep(Duration::from_millis(20));
+        }
+
+        self.set_all([0, 0, 0, 0]);
+        self.render();
+        println!("Startup animation complete.");
+    }
 }
 
 pub fn hsv_to_rgb(h: f32, s: f32, v: f32) -> [u8; 4] {

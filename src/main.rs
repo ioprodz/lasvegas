@@ -3,14 +3,15 @@ mod hardware;
 mod web;
 
 use command::{Command, StateUpdate};
+use hardware::led::LedStrip;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
 fn main() {
     // Hardware
-    let controller = &mut hardware::led::create_controller();
-    hardware::led::startup_animation(controller);
+    let strip = &mut LedStrip::new();
+    strip.startup_animation();
 
     // Channels: commands from WebSocket, state updates to WebSocket
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
@@ -22,7 +23,7 @@ fn main() {
     // WebSocket server (background thread)
     thread::spawn(move || web::websocket::start("0.0.0.0:8080", cmd_tx, state_rx));
 
-    // Main loop: owns the LED controller, runs animations
+    // Main loop: owns the LED strip, runs animations
     let mut active_animation: Option<String> = None;
     let mut frame: usize = 0;
     let mut audio_bands: [u8; 8] = [0; 8];
@@ -36,8 +37,9 @@ fn main() {
             match cmd {
                 Command::SetColor { r, g, b } => {
                     active_animation = None;
-                    hardware::led::set_all(controller, [r, g, b, 0]);
-                    let state = hardware::led::read_state(controller);
+                    strip.set_all([r, g, b, 0]);
+                    strip.render();
+                    let state = strip.read_state();
                     let _ = state_tx.send(StateUpdate::LedState(state));
                 }
                 Command::StartAnimation { name } => {
@@ -49,8 +51,9 @@ fn main() {
                     println!("Stopping animation");
                     active_animation = None;
                     audio_bands = [0; 8];
-                    hardware::led::set_all(controller, [0, 0, 0, 0]);
-                    let state = hardware::led::read_state(controller);
+                    strip.set_all([0, 0, 0, 0]);
+                    strip.render();
+                    let state = strip.read_state();
                     let _ = state_tx.send(StateUpdate::LedState(state));
                 }
                 Command::AudioData { bands } => {
@@ -64,19 +67,19 @@ fn main() {
         // Run animation frame if active
         if let Some(ref name) = active_animation {
             match name.as_str() {
-                "rainbow" => hardware::animation::rainbow_cycle(controller, frame),
-                "pulse" => hardware::animation::pulse(controller, frame),
-                "chase" => hardware::animation::color_chase(controller, frame),
-                "audio_spectrum" => hardware::animation::audio_spectrum(controller, &audio_bands),
-                "audio_pulse" => hardware::animation::audio_pulse(controller, &audio_bands),
-                "audio_chase" => hardware::animation::audio_chase(controller, frame, &audio_bands),
+                "rainbow" => hardware::animation::rainbow_cycle(strip, frame),
+                "pulse" => hardware::animation::pulse(strip, frame),
+                "chase" => hardware::animation::color_chase(strip, frame),
+                "audio_spectrum" => hardware::animation::audio_spectrum(strip, &audio_bands),
+                "audio_pulse" => hardware::animation::audio_pulse(strip, &audio_bands),
+                "audio_chase" => hardware::animation::audio_chase(strip, frame, &audio_bands),
                 _ => {}
             }
             frame = frame.wrapping_add(1);
 
             // Send state to UI every 3rd frame (~20fps updates to browser)
             if frame % 3 == 0 {
-                let state = hardware::led::read_state(controller);
+                let state = strip.read_state();
                 let _ = state_tx.send(StateUpdate::LedState(state));
             }
         }
