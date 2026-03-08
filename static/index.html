@@ -13,278 +13,512 @@
             min-height: 100vh;
         }
 
-        /* Navigation */
-        nav {
+        /* Layout */
+        .app {
             display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem 2rem;
-            background: #1a1a2e;
-            border-bottom: 1px solid #2a2a4a;
+            min-height: 100vh;
         }
-        nav h1 { font-size: 1.2rem; margin-right: 2rem; }
-        nav button {
-            padding: 0.5rem 1.2rem;
-            background: transparent;
-            color: #888;
-            border: 1px solid #333;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        nav button.active { background: #2d2d5e; color: #fff; border-color: #5555aa; }
-        nav button:hover { border-color: #5555aa; color: #ccc; }
-        #status {
-            margin-left: auto;
-            padding: 0.3rem 0.8rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-        }
-        .connected { background: #2d6a4f; }
-        .disconnected { background: #6a2d2d; }
 
-        /* Pages */
-        .page { display: none; padding: 2rem; }
-        .page.active { display: block; }
-
-        /* LED Grid */
-        .grid-container {
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            min-width: 260px;
+            background: #12121f;
+            border-right: 1px solid #2a2a4a;
             display: flex;
             flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 1.2rem 1.2rem 0.8rem;
+            display: flex;
             align-items: center;
-            margin-top: 1.5rem;
+            justify-content: space-between;
         }
-        .grid-label { color: #666; font-size: 0.8rem; margin-bottom: 0.5rem; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(60, 8px);
-            gap: 1px;
-            padding: 1rem;
-            background: #111;
-            border-radius: 8px;
+        .sidebar-header h1 { font-size: 1.1rem; font-weight: 600; }
+        #status {
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 500;
         }
-        .led {
-            width: 8px;
-            height: 8px;
-            background: #1a1a1a;
+        .connected { background: #1a4d35; color: #6fcf97; }
+        .disconnected { background: #4d1a1a; color: #cf6f6f; }
+
+        .sidebar-section {
+            padding: 0 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+        .sidebar-section-label {
+            color: #555;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.8rem 0.4rem 0.4rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.55rem 0.8rem;
+            background: transparent;
+            color: #999;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-align: left;
+            transition: all 0.15s;
+        }
+        .nav-item:hover { background: #1a1a30; color: #ccc; }
+        .nav-item.active { background: #1e1e3a; color: #fff; }
+        .nav-item.running {
+            background: #132e28;
+            color: #4ecdc4;
+        }
+        .nav-item .icon { font-size: 1rem; width: 1.2rem; text-align: center; }
+        .nav-item .running-dot {
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
+            background: #4ecdc4;
+            margin-left: auto;
+            flex-shrink: 0;
         }
+
+        .sidebar-divider {
+            height: 1px;
+            background: #2a2a4a;
+            margin: 0.3rem 1rem;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 0.8rem;
+        }
+        .stop-btn {
+            width: 100%;
+            padding: 0.55rem;
+            background: #2a1a1a;
+            color: #cf6f6f;
+            border: 1px solid #3a2222;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .stop-btn:hover:not(:disabled) { background: #3a2222; }
+        .stop-btn:disabled { opacity: 0.3; cursor: default; }
+
+        /* Main content area */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /* Preview layout modes */
+        .main.preview-top {
+            flex-direction: column;
+        }
+        /* In top mode, preview goes above content */
+        .main.preview-top .preview-panel { order: -1; }
+        .main.preview-right {
+            flex-direction: row;
+        }
+
+        /* Content panel */
+        .content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            min-width: 0;
+        }
+
+        .content-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.2rem;
+        }
+        .content-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        /* Page content */
+        .page { display: none; }
+        .page.active { display: block; }
 
         /* Cards */
         .card-list {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
         }
         .anim-card {
-            background: #1a1a2e;
-            border: 1px solid #2a2a4a;
+            background: #151525;
+            border: 1px solid #252545;
             border-radius: 8px;
-            padding: 1.5rem;
-            width: 220px;
+            padding: 1.2rem;
             cursor: pointer;
-            transition: border-color 0.2s;
+            transition: all 0.15s;
         }
-        .anim-card:hover { border-color: #5555aa; }
+        .anim-card:hover { border-color: #4a4a8a; background: #1a1a30; }
         .anim-card.running {
             border-color: #4ecdc4;
-            box-shadow: 0 0 12px rgba(78, 205, 196, 0.2);
+            background: #0f2a27;
         }
-        .anim-card h3 { margin-bottom: 0.5rem; font-size: 1rem; }
-        .anim-card p { color: #888; font-size: 0.85rem; line-height: 1.4; }
-        .anim-card .badge {
-            display: inline-block;
-            margin-top: 0.8rem;
-            padding: 0.2rem 0.6rem;
-            border-radius: 3px;
-            font-size: 0.75rem;
-            background: #2d6a4f;
-            color: #aaffcc;
-        }
+        .anim-card h3 { margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500; }
+        .anim-card p { color: #777; font-size: 0.8rem; line-height: 1.4; }
 
-        .stop-btn {
-            padding: 0.6rem 2rem;
-            background: #6a2d2d;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
+        .section-label {
+            color: #666;
+            font-size: 0.7rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
         }
-        .stop-btn:hover { background: #8a3d3d; }
-        .stop-btn:disabled { opacity: 0.4; cursor: default; }
 
         /* Audio controls */
         .audio-controls {
             display: flex;
-            gap: 0.8rem;
-            align-items: center;
-            margin-bottom: 1.5rem;
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
             flex-wrap: wrap;
         }
         .audio-btn {
-            padding: 0.5rem 1.2rem;
-            border: 1px solid #333;
-            border-radius: 4px;
+            padding: 0.45rem 1rem;
+            border: 1px solid #252545;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 0.85rem;
-            background: #1a1a2e;
-            color: #ccc;
+            font-size: 0.8rem;
+            background: #151525;
+            color: #999;
+            transition: all 0.15s;
         }
-        .audio-btn:hover { border-color: #5555aa; }
-        .audio-btn.active { background: #2d6a4f; border-color: #4ecdc4; color: #fff; }
-        .audio-btn:disabled { opacity: 0.4; cursor: default; }
+        .audio-btn:hover { border-color: #4a4a8a; color: #ccc; }
+        .audio-btn.active { background: #132e28; border-color: #4ecdc4; color: #4ecdc4; }
+        .audio-btn:disabled { opacity: 0.3; cursor: default; }
 
-        /* Frequency visualizer */
-        .visualizer-container {
-            margin-bottom: 1.5rem;
-        }
         #freq-canvas {
-            background: #111;
+            background: #111119;
             border-radius: 8px;
             display: block;
+            margin-bottom: 1.2rem;
+            width: 100%;
+            max-width: 400px;
+            height: 100px;
         }
 
-        .section-label {
+        /* LED Preview panel */
+        .preview-panel {
+            background: #0a0a14;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .main.preview-top .preview-panel {
+            border-bottom: 1px solid #2a2a4a;
+            padding: 1rem 1.5rem;
+        }
+        .main.preview-right .preview-panel {
+            border-left: 1px solid #2a2a4a;
+            padding: 1.5rem 1rem;
+            width: 90px;
+            min-width: 90px;
+        }
+
+        .preview-toggle {
+            position: absolute;
+            background: #1a1a30;
+            border: 1px solid #2a2a4a;
             color: #888;
-            font-size: 0.8rem;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            transition: all 0.15s;
+        }
+        .preview-toggle:hover { color: #ccc; border-color: #4a4a8a; }
+        .main.preview-top .preview-toggle { top: 0.5rem; right: 0.5rem; }
+        .main.preview-right .preview-toggle { top: 0.5rem; right: 0.5rem; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(60, 10px);
+            grid-template-rows: repeat(6, 10px);
+            gap: 2px;
         }
 
-        h2 { margin-bottom: 1rem; }
+        /* Vertical: just rotate the same grid 90 degrees */
+        .main.preview-right .grid {
+            transform: rotate(90deg);
+        }
+
+        .led {
+            background: #1a1a1a;
+            border-radius: 50%;
+        }
+
+        /* Responsive: collapse sidebar on small screens */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 0.6rem;
+            left: 0.6rem;
+            z-index: 100;
+            background: #1a1a30;
+            border: 1px solid #2a2a4a;
+            color: #ccc;
+            border-radius: 6px;
+            padding: 0.4rem 0.6rem;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-toggle { display: block; }
+            .sidebar {
+                position: fixed;
+                left: -270px;
+                top: 0;
+                bottom: 0;
+                z-index: 99;
+                transition: left 0.2s;
+            }
+            .sidebar.open { left: 0; }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 98;
+            }
+            .sidebar.open ~ .sidebar-overlay { display: block; }
+
+            /* Force horizontal preview on mobile */
+            .main.preview-right { flex-direction: column; }
+            .main.preview-right .preview-panel {
+                border-left: none;
+                border-bottom: 1px solid #2a2a4a;
+                width: auto;
+                min-width: auto;
+                padding: 1rem;
+                order: -1; /* Keep preview on top on mobile even in "right" mode */
+            }
+            .main.preview-right .grid {
+                transform: none;
+            }
+            .grid {
+                grid-template-columns: repeat(60, 7px);
+                grid-template-rows: repeat(6, 7px);
+            }
+        }
     </style>
 </head>
 <body>
-    <nav>
-        <h1>Las Vegas</h1>
-        <button class="nav-btn active" data-page="animations">Animations</button>
-        <button class="nav-btn" data-page="audio">Audio</button>
-        <div id="status" class="disconnected">Disconnected</div>
-    </nav>
+    <button class="sidebar-toggle" id="sidebar-toggle">&#9776;</button>
 
-    <!-- Animations Page -->
-    <div id="page-animations" class="page active">
-        <h2>Animations</h2>
-        <div class="card-list" id="basic-anims">
-            <div class="anim-card" data-anim="rainbow">
-                <h3>Rainbow Cycle</h3>
-                <p>Smooth rotating rainbow across all LEDs. Full spectrum.</p>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1>Las Vegas</h1>
+                <div id="status" class="disconnected">Offline</div>
             </div>
-            <div class="anim-card" data-anim="pulse">
-                <h3>Pulse</h3>
-                <p>Warm white breathing effect. Gentle fade in and out.</p>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">Animations</div>
+                <button class="nav-item" data-page="animations" data-anim="rainbow">
+                    <span class="icon">&#127752;</span> Rainbow Cycle
+                </button>
+                <button class="nav-item" data-page="animations" data-anim="pulse">
+                    <span class="icon">&#10024;</span> Pulse
+                </button>
+                <button class="nav-item" data-page="animations" data-anim="chase">
+                    <span class="icon">&#9889;</span> Color Chase
+                </button>
             </div>
-            <div class="anim-card" data-anim="chase">
-                <h3>Color Chase</h3>
-                <p>Cyan light segment chasing around the strip.</p>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">Audio Reactive</div>
+                <button class="nav-item" data-page="audio" data-anim="audio_spectrum">
+                    <span class="icon">&#127926;</span> Spectrum
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_pulse">
+                    <span class="icon">&#128266;</span> Audio Pulse
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_chase">
+                    <span class="icon">&#127925;</span> Audio Chase
+                </button>
             </div>
-        </div>
-        <button class="stop-btn" id="stop-btn" disabled>Stop Animation</button>
 
-        <div class="grid-container">
-            <div class="grid-label">LED Grid (60 x 6 = 360 LEDs)</div>
-            <div class="grid" id="grid"></div>
-        </div>
-    </div>
-
-    <!-- Audio Page -->
-    <div id="page-audio" class="page">
-        <h2>Audio Reactive</h2>
-
-        <div class="section-label">Audio Source</div>
-        <div class="audio-controls">
-            <button class="audio-btn" id="btn-mic">Microphone</button>
-            <button class="audio-btn" id="btn-system">System Audio (Tab)</button>
-            <button class="audio-btn" id="btn-stop-audio" disabled>Stop Audio</button>
-        </div>
-
-        <div class="visualizer-container">
-            <div class="section-label">Frequency Bands</div>
-            <canvas id="freq-canvas" width="400" height="120"></canvas>
-        </div>
-
-        <div class="section-label">Audio Animations</div>
-        <div class="card-list" id="audio-anims">
-            <div class="anim-card" data-anim="audio_spectrum">
-                <h3>Spectrum</h3>
-                <p>Frequency bands as colored bars across the strip. Bass=red, treble=blue.</p>
+            <div class="sidebar-footer">
+                <button class="stop-btn" id="stop-btn" disabled>Stop Animation</button>
             </div>
-            <div class="anim-card" data-anim="audio_pulse">
-                <h3>Audio Pulse</h3>
-                <p>Whole strip pulses with bass. Color shifts with treble energy.</p>
-            </div>
-            <div class="anim-card" data-anim="audio_chase">
-                <h3>Audio Chase</h3>
-                <p>Light chases around the strip. Speed from bass, color from dominant frequency.</p>
-            </div>
-        </div>
-        <button class="stop-btn" id="stop-btn-audio" disabled>Stop Animation</button>
+        </aside>
 
-        <div class="grid-container">
-            <div class="grid-label">LED Grid (60 x 6 = 360 LEDs)</div>
-            <div class="grid" id="grid-audio"></div>
-        </div>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- Main -->
+        <main class="main preview-top" id="main">
+            <!-- Content -->
+            <div class="content">
+                <!-- Animations page -->
+                <div id="page-animations" class="page active">
+                    <div class="content-header">
+                        <h2>Animations</h2>
+                    </div>
+                    <div class="card-list" id="basic-anims">
+                        <div class="anim-card" data-anim="rainbow">
+                            <h3>Rainbow Cycle</h3>
+                            <p>Smooth rotating rainbow across all LEDs. Full spectrum hue sweep.</p>
+                        </div>
+                        <div class="anim-card" data-anim="pulse">
+                            <h3>Pulse</h3>
+                            <p>Warm white breathing effect. Gentle fade in and out.</p>
+                        </div>
+                        <div class="anim-card" data-anim="chase">
+                            <h3>Color Chase</h3>
+                            <p>Cyan light segment chasing around the strip.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio page -->
+                <div id="page-audio" class="page">
+                    <div class="content-header">
+                        <h2>Audio Reactive</h2>
+                    </div>
+
+                    <div class="section-label">Audio Source</div>
+                    <div class="audio-controls">
+                        <button class="audio-btn" id="btn-mic">Microphone</button>
+                        <button class="audio-btn" id="btn-system">System Audio (Tab)</button>
+                        <button class="audio-btn" id="btn-stop-audio" disabled>Stop Audio</button>
+                    </div>
+
+                    <div class="section-label">Frequency Bands</div>
+                    <canvas id="freq-canvas"></canvas>
+
+                    <div class="section-label">Audio Animations</div>
+                    <div class="card-list" id="audio-anims">
+                        <div class="anim-card" data-anim="audio_spectrum">
+                            <h3>Spectrum</h3>
+                            <p>Frequency bands as colored bars across the strip. Bass=red, treble=blue.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_pulse">
+                            <h3>Audio Pulse</h3>
+                            <p>Whole strip pulses with bass. Color shifts with treble energy.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_chase">
+                            <h3>Audio Chase</h3>
+                            <p>Light chases around strip. Speed from bass, color from dominant frequency.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LED Preview -->
+            <div class="preview-panel">
+                <button class="preview-toggle" id="preview-toggle" title="Toggle preview layout">&#8693;</button>
+                <div class="grid" id="grid"></div>
+            </div>
+        </main>
     </div>
 
     <script>
-        // --- Navigation ---
-        const navButtons = document.querySelectorAll('.nav-btn');
-        navButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                navButtons.forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById('page-' + btn.dataset.page).classList.add('active');
+        // --- Sidebar navigation ---
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const navItems = document.querySelectorAll('.nav-item');
+        const pages = document.querySelectorAll('.page');
+
+        sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+        sidebarOverlay.addEventListener('click', () => sidebar.classList.remove('open'));
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const page = item.dataset.page;
+                const anim = item.dataset.anim;
+
+                // Switch page
+                pages.forEach(p => p.classList.remove('active'));
+                document.getElementById('page-' + page).classList.add('active');
+
+                // Start animation
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send('animate:' + anim);
+                    setActiveAnim(anim);
+                }
+
+                // Close sidebar on mobile
+                sidebar.classList.remove('open');
             });
         });
 
-        // --- LED Grids ---
-        function createGrid(container) {
-            const gridLeds = [];
-            for (let i = 0; i < 360; i++) {
-                const led = document.createElement('div');
-                led.className = 'led';
-                container.appendChild(led);
-                gridLeds.push(led);
-            }
-            return gridLeds;
+        // --- LED Grid ---
+        const gridContainer = document.getElementById('grid');
+        const gridLeds = [];
+        for (let i = 0; i < 360; i++) {
+            const led = document.createElement('div');
+            led.className = 'led';
+            gridContainer.appendChild(led);
+            gridLeds.push(led);
         }
 
-        const grids = [
-            createGrid(document.getElementById('grid')),
-            createGrid(document.getElementById('grid-audio')),
-        ];
+        const previewToggle = document.getElementById('preview-toggle');
+        const mainEl = document.getElementById('main');
+
+        previewToggle.addEventListener('click', () => {
+            mainEl.classList.toggle('preview-top');
+            mainEl.classList.toggle('preview-right');
+        });
 
         function updateGrid(data) {
-            for (const gridLeds of grids) {
-                for (let i = 0; i < 360 && i * 3 + 2 < data.length; i++) {
-                    gridLeds[i].style.background = `rgb(${data[i*3]},${data[i*3+1]},${data[i*3+2]})`;
-                }
+            for (let i = 0; i < 360 && i * 3 + 2 < data.length; i++) {
+                gridLeds[i].style.background = `rgb(${data[i*3]},${data[i*3+1]},${data[i*3+2]})`;
             }
         }
 
-        // --- Animation controls (shared across pages) ---
+        // --- Animation state ---
         const allAnimCards = document.querySelectorAll('.anim-card');
-        const stopBtns = [document.getElementById('stop-btn'), document.getElementById('stop-btn-audio')];
+        const stopBtn = document.getElementById('stop-btn');
         let currentAnim = null;
 
         function setActiveAnim(name) {
             currentAnim = name;
+            // Update cards
             allAnimCards.forEach(card => {
                 card.classList.toggle('running', card.dataset.anim === name);
-                const badge = card.querySelector('.badge');
-                if (badge) badge.remove();
-                if (card.dataset.anim === name) {
-                    const b = document.createElement('span');
-                    b.className = 'badge';
-                    b.textContent = 'Running';
-                    card.appendChild(b);
+            });
+            // Update nav items
+            navItems.forEach(item => {
+                item.classList.toggle('running', item.dataset.anim === name);
+                let dot = item.querySelector('.running-dot');
+                if (item.dataset.anim === name) {
+                    if (!dot) {
+                        dot = document.createElement('span');
+                        dot.className = 'running-dot';
+                        item.appendChild(dot);
+                    }
+                } else if (dot) {
+                    dot.remove();
                 }
             });
-            stopBtns.forEach(btn => btn.disabled = !name);
+            stopBtn.disabled = !name;
         }
 
         allAnimCards.forEach(card => {
@@ -297,13 +531,11 @@
             });
         });
 
-        stopBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send('stop');
-                    setActiveAnim(null);
-                }
-            });
+        stopBtn.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('stop');
+                setActiveAnim(null);
+            }
         });
 
         // --- Audio Capture & Analysis ---
@@ -314,14 +546,8 @@
         let audioInterval = null;
 
         const BAND_RANGES = [
-            [0, 2],       // Sub-bass  ~0-86Hz
-            [2, 6],       // Bass      ~86-258Hz
-            [6, 12],      // Low-mid   ~258-516Hz
-            [12, 23],     // Mid       ~516-990Hz
-            [23, 46],     // Upper-mid ~990-1978Hz
-            [46, 93],     // Presence  ~1978-4000Hz
-            [93, 139],    // Brilliance ~4000-5984Hz
-            [139, 232],   // Treble    ~5984-10000Hz
+            [0, 2], [2, 6], [6, 12], [12, 23],
+            [23, 46], [46, 93], [93, 139], [139, 232],
         ];
 
         function computeBands(freqData) {
@@ -329,9 +555,7 @@
             for (let b = 0; b < 8; b++) {
                 const [start, end] = BAND_RANGES[b];
                 let sum = 0;
-                for (let i = start; i < end && i < freqData.length; i++) {
-                    sum += freqData[i];
-                }
+                for (let i = start; i < end && i < freqData.length; i++) sum += freqData[i];
                 bands[b] = Math.min(255, Math.round(sum / (end - start)));
             }
             return bands;
@@ -339,16 +563,14 @@
 
         async function startAudio(mode) {
             stopAudio();
-
             try {
                 if (mode === 'mic') {
                     audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 } else {
                     audioStream = await navigator.mediaDevices.getDisplayMedia({
                         audio: true,
-                        video: { width: 1, height: 1 } // minimal video (required by Chrome)
+                        video: { width: 1, height: 1 }
                     });
-                    // Discard video track
                     audioStream.getVideoTracks().forEach(t => t.stop());
                 }
 
@@ -365,23 +587,18 @@
                 audioInterval = setInterval(() => {
                     analyser.getByteFrequencyData(freqData);
                     const bands = computeBands(freqData);
-
-                    // Draw visualizer
                     drawVisualizer(bands);
-
-                    // Send to server
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         const msg = new Uint8Array(1 + bands.length);
                         msg[0] = 0x02;
                         msg.set(bands, 1);
                         ws.send(msg.buffer);
                     }
-                }, 33); // ~30Hz
+                }, 33);
 
                 document.getElementById('btn-mic').classList.toggle('active', mode === 'mic');
                 document.getElementById('btn-system').classList.toggle('active', mode === 'system');
                 document.getElementById('btn-stop-audio').disabled = false;
-
             } catch (err) {
                 console.error('Audio capture failed:', err);
             }
@@ -392,23 +609,14 @@
             if (audioSource) audioSource.disconnect();
             if (audioStream) audioStream.getTracks().forEach(t => t.stop());
             if (audioCtx) audioCtx.close();
-            audioCtx = null;
-            analyser = null;
-            audioSource = null;
-            audioStream = null;
-            audioInterval = null;
-
+            audioCtx = null; analyser = null; audioSource = null; audioStream = null; audioInterval = null;
             document.getElementById('btn-mic').classList.remove('active');
             document.getElementById('btn-system').classList.remove('active');
             document.getElementById('btn-stop-audio').disabled = true;
-
-            // Clear visualizer
             const canvas = document.getElementById('freq-canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Visualizer
         const bandLabels = ['Sub', 'Bass', 'Low', 'Mid', 'UMid', 'Pres', 'Bril', 'Treb'];
         const bandColors = [
             '#ff0000', '#ff4400', '#ff8800', '#44ff00',
@@ -418,24 +626,31 @@
         function drawVisualizer(bands) {
             const canvas = document.getElementById('freq-canvas');
             const ctx = canvas.getContext('2d');
-            const w = canvas.width;
-            const h = canvas.height;
+            // Match canvas internal resolution to display size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * devicePixelRatio;
+            canvas.height = rect.height * devicePixelRatio;
+            ctx.scale(devicePixelRatio, devicePixelRatio);
+            const w = rect.width;
+            const h = rect.height;
             ctx.clearRect(0, 0, w, h);
 
-            const barW = (w - 40) / 8;
-            const gap = 4;
+            const barW = (w - 20) / 8;
+            const gap = 3;
 
             for (let i = 0; i < 8; i++) {
-                const x = 20 + i * barW;
-                const barH = (bands[i] / 255) * (h - 25);
-
+                const x = 10 + i * barW;
+                const barH = (bands[i] / 255) * (h - 22);
                 ctx.fillStyle = bandColors[i];
-                ctx.fillRect(x + gap/2, h - 20 - barH, barW - gap, barH);
-
-                ctx.fillStyle = '#666';
-                ctx.font = '10px system-ui';
+                ctx.globalAlpha = 0.85;
+                ctx.beginPath();
+                ctx.roundRect(x + gap/2, h - 18 - barH, barW - gap, barH, 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = '#555';
+                ctx.font = '9px system-ui';
                 ctx.textAlign = 'center';
-                ctx.fillText(bandLabels[i], x + barW/2, h - 5);
+                ctx.fillText(bandLabels[i], x + barW/2, h - 4);
             }
         }
 
@@ -451,27 +666,16 @@
             const host = window.location.hostname;
             ws = new WebSocket(`ws://${host}:8080`);
             ws.binaryType = 'arraybuffer';
-
-            ws.onopen = () => {
-                statusEl.textContent = 'Connected';
-                statusEl.className = 'connected';
-            };
-
+            ws.onopen = () => { statusEl.textContent = 'Online'; statusEl.className = 'connected'; };
             ws.onclose = () => {
-                statusEl.textContent = 'Disconnected';
-                statusEl.className = 'disconnected';
-                currentAnim = null;
+                statusEl.textContent = 'Offline'; statusEl.className = 'disconnected';
                 setActiveAnim(null);
                 setTimeout(connect, 2000);
             };
-
             ws.onmessage = (event) => {
-                if (event.data instanceof ArrayBuffer) {
-                    updateGrid(new Uint8Array(event.data));
-                }
+                if (event.data instanceof ArrayBuffer) updateGrid(new Uint8Array(event.data));
             };
         }
-
         connect();
     </script>
 </body>
