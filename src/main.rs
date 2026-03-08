@@ -95,6 +95,11 @@ fn main() {
                 "audio_spectrum" => hardware::animation::audio_spectrum(strip, &audio_bands),
                 "audio_pulse" => hardware::animation::audio_pulse(strip, &audio_bands),
                 "audio_chase" => hardware::animation::audio_chase(strip, frame, &audio_bands),
+                "audio_ripple" => hardware::animation::audio_ripple(strip, &audio_bands),
+                "audio_waterfall" => hardware::animation::audio_waterfall(strip, &audio_bands),
+                "audio_sparkle" => hardware::animation::audio_sparkle(strip, &audio_bands),
+                "audio_energy" => hardware::animation::audio_energy(strip, &audio_bands),
+                "audio_pastel" => hardware::animation::audio_pastel(strip, &audio_bands),
                 _ => {}
             }
             frame = frame.wrapping_add(1);

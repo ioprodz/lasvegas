@@ -541,6 +541,21 @@
                 <button class="nav-item" data-page="audio" data-anim="audio_chase">
                     <span class="icon">&#127925;</span> Audio Chase
                 </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_ripple">
+                    <span class="icon">&#127754;</span> Beat Ripple
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_waterfall">
+                    <span class="icon">&#127752;</span> Waterfall
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_sparkle">
+                    <span class="icon">&#10028;</span> Sparkle Rain
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_energy">
+                    <span class="icon">&#9608;</span> Energy Bars
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_pastel">
+                    <span class="icon">&#9673;</span> Pastel Sections
+                </button>
             </div>
 
             <div class="sidebar-divider"></div>
@@ -719,6 +734,26 @@
                             <h3>Audio Chase</h3>
                             <p>Light chases around strip. Speed from bass, color from dominant frequency.</p>
                         </div>
+                        <div class="anim-card" data-anim="audio_ripple">
+                            <h3>Beat Ripple</h3>
+                            <p>Bass beats spawn expanding color waves from the center. Multiple ripples layer and blend.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_waterfall">
+                            <h3>Waterfall</h3>
+                            <p>Scrolling spectrogram across the 60x6 grid. Each row is a frequency range, time flows left.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_sparkle">
+                            <h3>Sparkle Rain</h3>
+                            <p>High frequencies spawn bright sparks at random positions. Bass drives a warm background glow.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_energy">
+                            <h3>Energy Bars</h3>
+                            <p>Each row is a frequency band with centered energy bars. Smooth attack/decay for fluid motion.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_pastel">
+                            <h3>Pastel Sections</h3>
+                            <p>Each row breathes with soft pastel colors tied to a frequency range. Gentle fades with drifting hues.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -838,18 +873,55 @@
         let audioStream = null;
         let audioInterval = null;
 
+        // Web Worker timer — not throttled when tab is backgrounded
+        const timerWorkerBlob = new Blob([`
+            let iv = null;
+            self.onmessage = (e) => {
+                if (e.data === 'start') { iv = setInterval(() => self.postMessage(0), 33); }
+                else if (e.data === 'stop') { clearInterval(iv); iv = null; }
+            };
+        `], { type: 'application/javascript' });
+        const timerWorker = new Worker(URL.createObjectURL(timerWorkerBlob));
+
         const BAND_RANGES = [
             [0, 2], [2, 6], [6, 12], [12, 23],
             [23, 46], [46, 93], [93, 139], [139, 232],
         ];
 
+        // Auto-gain: tracks the recent peak and scales bands to fill 0-255.
+        // Fast attack (responds immediately to louder audio), slow decay
+        // (gradually increases gain during quiet passages). Minimum floor
+        // prevents silence from being amplified into noise.
+        let agcPeak = 30;          // current tracked peak (starts low to ramp up fast)
+        const AGC_ATTACK = 0.6;    // how fast peak rises (0-1, higher = faster)
+        const AGC_DECAY = 0.002;   // how fast peak falls (per tick, ~30Hz)
+        const AGC_FLOOR = 8;       // ignore signals below this (noise gate)
+
         function computeBands(freqData) {
-            const bands = new Uint8Array(8);
+            const raw = new Float32Array(8);
+            let maxRaw = 0;
             for (let b = 0; b < 8; b++) {
                 const [start, end] = BAND_RANGES[b];
                 let sum = 0;
                 for (let i = start; i < end && i < freqData.length; i++) sum += freqData[i];
-                bands[b] = Math.min(255, Math.round(sum / (end - start)));
+                raw[b] = sum / (end - start);
+                if (raw[b] > maxRaw) maxRaw = raw[b];
+            }
+
+            // Update AGC peak: fast attack, slow decay
+            if (maxRaw > agcPeak) {
+                agcPeak += (maxRaw - agcPeak) * AGC_ATTACK;
+            } else {
+                agcPeak *= (1 - AGC_DECAY);
+            }
+            // Clamp peak to a reasonable minimum so we don't divide by near-zero
+            agcPeak = Math.max(agcPeak, AGC_FLOOR);
+
+            // Normalize bands against the tracked peak
+            const bands = new Uint8Array(8);
+            const gain = 255 / agcPeak;
+            for (let b = 0; b < 8; b++) {
+                bands[b] = Math.min(255, Math.round(raw[b] * gain));
             }
             return bands;
         }
@@ -877,17 +949,19 @@
 
                 const freqData = new Uint8Array(analyser.frequencyBinCount);
 
-                audioInterval = setInterval(() => {
+                timerWorker.onmessage = () => {
+                    if (!analyser) return;
                     analyser.getByteFrequencyData(freqData);
                     const bands = computeBands(freqData);
-                    drawVisualizer(bands);
+                    if (document.visibilityState === 'visible') drawVisualizer(bands);
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         const msg = new Uint8Array(1 + bands.length);
                         msg[0] = 0x02;
                         msg.set(bands, 1);
                         ws.send(msg.buffer);
                     }
-                }, 33);
+                };
+                timerWorker.postMessage('start');
 
                 document.getElementById('btn-mic').classList.toggle('active', mode === 'mic');
                 document.getElementById('btn-system').classList.toggle('active', mode === 'system');
@@ -898,7 +972,7 @@
         }
 
         function stopAudio() {
-            if (audioInterval) clearInterval(audioInterval);
+            timerWorker.postMessage('stop');
             if (audioSource) audioSource.disconnect();
             if (audioStream) audioStream.getTracks().forEach(t => t.stop());
             if (audioCtx) audioCtx.close();
