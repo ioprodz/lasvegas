@@ -11,5 +11,4 @@ pub fn audio_pulse(strip: &mut LedStrip, bands: &[u8; 8]) {
     let hue = treble * 360.0;
     let color = hsv_to_rgb(hue, 1.0, bass);
     strip.set_all(color);
-    strip.render();
 }

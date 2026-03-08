@@ -4,6 +4,7 @@ use std::net::TcpListener;
 use std::sync::mpsc;
 
 use crate::command::{Command, StateUpdate};
+use crate::hardware::calibration::Calibration;
 
 pub fn start(
     addr: &str,
@@ -27,6 +28,12 @@ pub fn start(
                         responder.send(Message::Binary(state.clone()));
                     }
                 }
+                StateUpdate::CalibrationData(json) => {
+                    let msg = format!("calibration:{}", json);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
             }
         }
 
@@ -36,6 +43,8 @@ pub fn start(
                 Event::Connect(client_id, responder) => {
                     println!("Client #{} connected", client_id);
                     clients.insert(client_id, responder);
+                    // Send current calibration to new client
+                    let _ = cmd_tx.send(Command::GetCalibration);
                 }
                 Event::Disconnect(client_id) => {
                     println!("Client #{} disconnected", client_id);
@@ -70,6 +79,12 @@ fn parse_command(text: &str) -> Option<Command> {
         Some(Command::StartAnimation {
             name: name.trim().to_string(),
         })
+    } else if let Some(params) = text.strip_prefix("calibrate:") {
+        Calibration::from_command(params).map(Command::SetCalibration)
+    } else if text == "save_calibration" {
+        Some(Command::SaveCalibration)
+    } else if text == "get_calibration" {
+        Some(Command::GetCalibration)
     } else {
         None
     }

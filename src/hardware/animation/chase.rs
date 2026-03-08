@@ -12,5 +12,4 @@ pub fn color_chase(strip: &mut LedStrip, frame: usize) {
             strip.set(i, [0, 0, 0, 0]);
         }
     }
-    strip.render();
 }

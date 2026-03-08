@@ -216,6 +216,185 @@
             height: 100px;
         }
 
+        /* Calibration page */
+        .cal-section {
+            margin-bottom: 1.5rem;
+        }
+        .cal-section h3 {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.8rem;
+        }
+        .cal-color-test {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .cal-color-test input[type="color"] {
+            width: 60px;
+            height: 40px;
+            border: 1px solid #252545;
+            border-radius: 6px;
+            background: #151525;
+            cursor: pointer;
+        }
+        .cal-color-test input[type="range"] {
+            width: 120px;
+        }
+        .cal-swatch {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            border: 1px solid #252545;
+        }
+        .cal-channels {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.6rem;
+        }
+        @media (max-width: 900px) {
+            .cal-channels { grid-template-columns: 1fr; }
+        }
+        .cal-channel {
+            background: #151525;
+            border: 1px solid #252545;
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+        }
+        .cal-channel-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.8rem;
+        }
+        .cal-channel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .cal-channel-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .cal-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.4rem;
+        }
+        .cal-slider-row label {
+            font-size: 0.75rem;
+            color: #888;
+            width: 50px;
+            flex-shrink: 0;
+        }
+        .cal-slider-row input[type="range"] {
+            flex: 1;
+            max-width: 250px;
+        }
+        .cal-slider-row .cal-value {
+            font-size: 0.75rem;
+            color: #aaa;
+            width: 40px;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        /* Dual range slider */
+        .dual-range {
+            position: relative;
+            height: 20px;
+            flex: 1;
+            max-width: 250px;
+        }
+        .dual-range input[type="range"] {
+            position: absolute;
+            width: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            margin: 0;
+            height: 20px;
+            max-width: none;
+        }
+        .dual-range input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ccc;
+            border: 2px solid #888;
+            cursor: pointer;
+            pointer-events: auto;
+            position: relative;
+            z-index: 2;
+        }
+        .dual-range input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: transparent;
+            border-radius: 2px;
+        }
+        .dual-range-track {
+            position: absolute;
+            top: 8px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #252545;
+            border-radius: 2px;
+        }
+        .dual-range-fill {
+            position: absolute;
+            top: 8px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        .dual-range-values {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #aaa;
+            font-family: monospace;
+            margin-top: 2px;
+        }
+        .cal-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .cal-btn {
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .cal-btn-save {
+            background: #1a4d35;
+            color: #6fcf97;
+            border: 1px solid #2a6b4a;
+        }
+        .cal-btn-save:hover { background: #2a6b4a; }
+        .cal-btn-reset {
+            background: #1a1a30;
+            color: #999;
+            border: 1px solid #252545;
+        }
+        .cal-btn-reset:hover { background: #252545; color: #ccc; }
+        .cal-btn-test {
+            background: #2a2a1a;
+            color: #cfcf6f;
+            border: 1px solid #3a3a22;
+        }
+        .cal-btn-test:hover { background: #3a3a22; }
+
         /* LED Preview panel */
         .preview-panel {
             background: #0a0a14;
@@ -364,6 +543,15 @@
                 </button>
             </div>
 
+            <div class="sidebar-divider"></div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">Settings</div>
+                <button class="nav-item" data-page="calibrate" id="nav-calibrate">
+                    <span class="icon">&#9881;</span> Calibrate
+                </button>
+            </div>
+
             <div class="sidebar-footer">
                 <button class="stop-btn" id="stop-btn" disabled>Stop Animation</button>
             </div>
@@ -393,6 +581,111 @@
                             <h3>Color Chase</h3>
                             <p>Cyan light segment chasing around the strip.</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Calibrate page -->
+                <div id="page-calibrate" class="page">
+                    <div class="content-header">
+                        <h2>Calibrate LEDs</h2>
+                    </div>
+
+                    <div class="cal-section">
+                        <div class="section-label">Test Color</div>
+                        <div class="cal-color-test">
+                            <input type="color" id="cal-color" value="#ffffff">
+                            <div>
+                                <label style="font-size:0.75rem;color:#888;">Brightness</label>
+                                <input type="range" id="cal-brightness" min="0" max="255" value="255">
+                            </div>
+                            <button class="cal-btn cal-btn-test" id="cal-fill-btn">Fill Strip</button>
+                            <button class="cal-btn cal-btn-reset" id="cal-off-btn">LEDs Off</button>
+                        </div>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+                            <button class="cal-btn cal-btn-test" data-test-color="255,0,0">Red Only</button>
+                            <button class="cal-btn cal-btn-test" data-test-color="0,255,0">Green Only</button>
+                            <button class="cal-btn cal-btn-test" data-test-color="0,0,255">Blue Only</button>
+                            <button class="cal-btn cal-btn-test" data-test-color="255,255,255">White</button>
+                            <button class="cal-btn cal-btn-test" data-test-color="128,128,128">50% Gray</button>
+                            <button class="cal-btn cal-btn-test" data-test-color="32,32,32">Low Gray</button>
+                        </div>
+                    </div>
+
+                    <div class="cal-section">
+                        <div class="section-label">Channel Calibration</div>
+
+                        <div class="cal-channels">
+                        <div class="cal-channel">
+                            <div class="cal-channel-header">
+                                <div class="cal-channel-dot" style="background:#ff4444;"></div>
+                                <span class="cal-channel-name">Red</span>
+                            </div>
+                            <div class="cal-slider-row">
+                                <label>Range</label>
+                                <div class="dual-range" data-channel="r">
+                                    <div class="dual-range-track"></div>
+                                    <div class="dual-range-fill" id="cal-r-fill" style="background:#ff4444;"></div>
+                                    <input type="range" id="cal-r-min" min="0" max="255" value="0">
+                                    <input type="range" id="cal-r-max" min="0" max="255" value="255">
+                                </div>
+                                <span class="cal-value" id="cal-r-range-val">0-255</span>
+                            </div>
+                            <div class="cal-slider-row">
+                                <label>Gamma</label>
+                                <input type="range" id="cal-r-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
+                                <span class="cal-value" id="cal-r-gamma-val">1.00</span>
+                            </div>
+                        </div>
+
+                        <div class="cal-channel">
+                            <div class="cal-channel-header">
+                                <div class="cal-channel-dot" style="background:#44ff44;"></div>
+                                <span class="cal-channel-name">Green</span>
+                            </div>
+                            <div class="cal-slider-row">
+                                <label>Range</label>
+                                <div class="dual-range" data-channel="g">
+                                    <div class="dual-range-track"></div>
+                                    <div class="dual-range-fill" id="cal-g-fill" style="background:#44ff44;"></div>
+                                    <input type="range" id="cal-g-min" min="0" max="255" value="0">
+                                    <input type="range" id="cal-g-max" min="0" max="255" value="255">
+                                </div>
+                                <span class="cal-value" id="cal-g-range-val">0-255</span>
+                            </div>
+                            <div class="cal-slider-row">
+                                <label>Gamma</label>
+                                <input type="range" id="cal-g-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
+                                <span class="cal-value" id="cal-g-gamma-val">1.00</span>
+                            </div>
+                        </div>
+
+                        <div class="cal-channel">
+                            <div class="cal-channel-header">
+                                <div class="cal-channel-dot" style="background:#4444ff;"></div>
+                                <span class="cal-channel-name">Blue</span>
+                            </div>
+                            <div class="cal-slider-row">
+                                <label>Range</label>
+                                <div class="dual-range" data-channel="b">
+                                    <div class="dual-range-track"></div>
+                                    <div class="dual-range-fill" id="cal-b-fill" style="background:#4444ff;"></div>
+                                    <input type="range" id="cal-b-min" min="0" max="255" value="0">
+                                    <input type="range" id="cal-b-max" min="0" max="255" value="255">
+                                </div>
+                                <span class="cal-value" id="cal-b-range-val">0-255</span>
+                            </div>
+                            <div class="cal-slider-row">
+                                <label>Gamma</label>
+                                <input type="range" id="cal-b-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
+                                <span class="cal-value" id="cal-b-gamma-val">1.00</span>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <div class="cal-actions">
+                        <button class="cal-btn cal-btn-save" id="cal-save-btn">Save Calibration</button>
+                        <button class="cal-btn cal-btn-reset" id="cal-reset-btn">Reset to Default</button>
                     </div>
                 </div>
 
@@ -658,6 +951,134 @@
         document.getElementById('btn-system').addEventListener('click', () => startAudio('system'));
         document.getElementById('btn-stop-audio').addEventListener('click', stopAudio);
 
+        // --- Calibrate nav (page-only, no animation start) ---
+        document.getElementById('nav-calibrate').addEventListener('click', () => {
+            pages.forEach(p => p.classList.remove('active'));
+            document.getElementById('page-calibrate').classList.add('active');
+            navItems.forEach(n => n.classList.remove('active'));
+            document.getElementById('nav-calibrate').classList.add('active');
+            sidebar.classList.remove('open');
+            // Request current calibration
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send('get_calibration');
+        });
+
+        // --- Calibration controls ---
+        const calSliders = {
+            r: { min: document.getElementById('cal-r-min'), max: document.getElementById('cal-r-max'), gamma: document.getElementById('cal-r-gamma'), fill: document.getElementById('cal-r-fill'), rangeVal: document.getElementById('cal-r-range-val') },
+            g: { min: document.getElementById('cal-g-min'), max: document.getElementById('cal-g-max'), gamma: document.getElementById('cal-g-gamma'), fill: document.getElementById('cal-g-fill'), rangeVal: document.getElementById('cal-g-range-val') },
+            b: { min: document.getElementById('cal-b-min'), max: document.getElementById('cal-b-max'), gamma: document.getElementById('cal-b-gamma'), fill: document.getElementById('cal-b-fill'), rangeVal: document.getElementById('cal-b-range-val') },
+        };
+        const calGammaValues = {
+            r: document.getElementById('cal-r-gamma-val'),
+            g: document.getElementById('cal-g-gamma-val'),
+            b: document.getElementById('cal-b-gamma-val'),
+        };
+
+        function clampDualRange(ch, changed) {
+            const s = calSliders[ch];
+            let minV = parseInt(s.min.value);
+            let maxV = parseInt(s.max.value);
+            if (changed === 'min' && minV > maxV) s.min.value = maxV;
+            if (changed === 'max' && maxV < minV) s.max.value = minV;
+        }
+
+        function updateDualRangeFill(ch) {
+            const s = calSliders[ch];
+            const minV = parseInt(s.min.value);
+            const maxV = parseInt(s.max.value);
+            const left = (minV / 255) * 100;
+            const right = (maxV / 255) * 100;
+            s.fill.style.left = left + '%';
+            s.fill.style.width = (right - left) + '%';
+            s.rangeVal.textContent = minV + '-' + maxV;
+        }
+
+        function sendCalibration() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const params = ['r','g','b'].map(ch =>
+                `${calSliders[ch].min.value},${calSliders[ch].max.value},${calSliders[ch].gamma.value}`
+            ).join(',');
+            ws.send('calibrate:' + params);
+        }
+
+        function updateCalDisplay() {
+            for (const ch of ['r','g','b']) {
+                updateDualRangeFill(ch);
+                calGammaValues[ch].textContent = parseFloat(calSliders[ch].gamma.value).toFixed(2);
+            }
+        }
+
+        // Attach input listeners to all calibration sliders
+        for (const ch of ['r','g','b']) {
+            calSliders[ch].min.addEventListener('input', () => {
+                clampDualRange(ch, 'min');
+                updateCalDisplay();
+                sendCalibration();
+            });
+            calSliders[ch].max.addEventListener('input', () => {
+                clampDualRange(ch, 'max');
+                updateCalDisplay();
+                sendCalibration();
+            });
+            calSliders[ch].gamma.addEventListener('input', () => {
+                updateCalDisplay();
+                sendCalibration();
+            });
+        }
+        // Initialize fills
+        updateCalDisplay();
+
+        function applyCalibrationFromServer(data) {
+            for (const ch of ['r','g','b']) {
+                if (data[ch]) {
+                    calSliders[ch].min.value = data[ch].min;
+                    calSliders[ch].max.value = data[ch].max;
+                    calSliders[ch].gamma.value = data[ch].gamma;
+                }
+            }
+            updateCalDisplay();
+        }
+
+        // Test color fill
+        document.getElementById('cal-fill-btn').addEventListener('click', () => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const hex = document.getElementById('cal-color').value;
+            const brightness = parseInt(document.getElementById('cal-brightness').value) / 255;
+            const r = Math.round(parseInt(hex.slice(1,3), 16) * brightness);
+            const g = Math.round(parseInt(hex.slice(3,5), 16) * brightness);
+            const b = Math.round(parseInt(hex.slice(5,7), 16) * brightness);
+            ws.send(new Uint8Array([0x01, r, g, b]).buffer);
+        });
+
+        document.getElementById('cal-off-btn').addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send('stop');
+            setActiveAnim(null);
+        });
+
+        // Quick test color buttons
+        document.querySelectorAll('[data-test-color]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                const [r,g,b] = btn.dataset.testColor.split(',').map(Number);
+                ws.send(new Uint8Array([0x01, r, g, b]).buffer);
+            });
+        });
+
+        // Save / Reset
+        document.getElementById('cal-save-btn').addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send('save_calibration');
+        });
+
+        document.getElementById('cal-reset-btn').addEventListener('click', () => {
+            for (const ch of ['r','g','b']) {
+                calSliders[ch].min.value = 0;
+                calSliders[ch].max.value = 255;
+                calSliders[ch].gamma.value = '1.0';
+            }
+            updateCalDisplay();
+            sendCalibration();
+        });
+
         // --- WebSocket ---
         const statusEl = document.getElementById('status');
         let ws;
@@ -673,7 +1094,14 @@
                 setTimeout(connect, 2000);
             };
             ws.onmessage = (event) => {
-                if (event.data instanceof ArrayBuffer) updateGrid(new Uint8Array(event.data));
+                if (event.data instanceof ArrayBuffer) {
+                    updateGrid(new Uint8Array(event.data));
+                } else if (typeof event.data === 'string' && event.data.startsWith('calibration:')) {
+                    try {
+                        const data = JSON.parse(event.data.slice('calibration:'.length));
+                        applyCalibrationFromServer(data);
+                    } catch(e) { console.error('Failed to parse calibration:', e); }
+                }
             };
         }
         connect();

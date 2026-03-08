@@ -1,3 +1,4 @@
+use super::calibration::Calibration;
 use rs_ws281x::{ChannelBuilder, ControllerBuilder, StripType};
 use std::thread::sleep;
 use std::time::Duration;
@@ -45,11 +46,30 @@ impl LedStrip {
         }
     }
 
-    /// Render the current buffer to the hardware, applying zigzag correction.
+    /// Render the current buffer to the hardware, applying calibration and zigzag correction.
     pub fn render(&mut self) {
-        // Apply zigzag: reverse odd rows to match physical wiring
+        self.render_with_calibration(None);
+    }
+
+    /// Render with optional calibration applied before sending to hardware.
+    pub fn render_calibrated(&mut self, cal: &Calibration) {
+        self.render_with_calibration(Some(cal));
+    }
+
+    fn render_with_calibration(&mut self, cal: Option<&Calibration>) {
         let leds = self.controller.leds_mut(0);
         let num_rows = LED_COUNT / LEDS_PER_ROW;
+
+        // Apply calibration: transform colors in-place, remember originals
+        let originals: Option<Vec<[u8; 4]>> = cal.map(|c| {
+            let orig: Vec<[u8; 4]> = leds.iter().copied().collect();
+            for led in leds.iter_mut() {
+                *led = c.apply(*led);
+            }
+            orig
+        });
+
+        // Apply zigzag: reverse odd rows to match physical wiring
         for row in 0..num_rows {
             if row % 2 == 1 {
                 let start = row * LEDS_PER_ROW;
@@ -60,13 +80,21 @@ impl LedStrip {
 
         self.controller.render().unwrap();
 
-        // Reverse back so the logical buffer stays in logical order
+        // Reverse zigzag back
         let leds = self.controller.leds_mut(0);
         for row in 0..num_rows {
             if row % 2 == 1 {
                 let start = row * LEDS_PER_ROW;
                 let end = start + LEDS_PER_ROW;
                 leds[start..end].reverse();
+            }
+        }
+
+        // Restore original uncalibrated colors
+        if let Some(orig) = originals {
+            let leds = self.controller.leds_mut(0);
+            for (led, o) in leds.iter_mut().zip(orig.iter()) {
+                *led = *o;
             }
         }
     }

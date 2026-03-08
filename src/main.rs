@@ -3,6 +3,7 @@ mod hardware;
 mod web;
 
 use command::{Command, StateUpdate};
+use hardware::calibration::Calibration;
 use hardware::led::LedStrip;
 use std::sync::mpsc;
 use std::thread;
@@ -12,6 +13,10 @@ fn main() {
     // Hardware
     let strip = &mut LedStrip::new();
     strip.startup_animation();
+
+    // Load saved calibration
+    let mut calibration = Calibration::load();
+    println!("Loaded calibration: {:?}", calibration);
 
     // Channels: commands from WebSocket, state updates to WebSocket
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
@@ -38,7 +43,7 @@ fn main() {
                 Command::SetColor { r, g, b } => {
                     active_animation = None;
                     strip.set_all([r, g, b, 0]);
-                    strip.render();
+                    strip.render_calibrated(&calibration);
                     let state = strip.read_state();
                     let _ = state_tx.send(StateUpdate::LedState(state));
                 }
@@ -52,7 +57,7 @@ fn main() {
                     active_animation = None;
                     audio_bands = [0; 8];
                     strip.set_all([0, 0, 0, 0]);
-                    strip.render();
+                    strip.render_calibrated(&calibration);
                     let state = strip.read_state();
                     let _ = state_tx.send(StateUpdate::LedState(state));
                 }
@@ -60,6 +65,23 @@ fn main() {
                     for (i, &b) in bands.iter().enumerate().take(8) {
                         audio_bands[i] = b;
                     }
+                }
+                Command::SetCalibration(cal) => {
+                    calibration = cal;
+                    // Re-render current state with new calibration
+                    strip.render_calibrated(&calibration);
+                    let state = strip.read_state();
+                    let _ = state_tx.send(StateUpdate::LedState(state));
+                }
+                Command::SaveCalibration => {
+                    match calibration.save() {
+                        Ok(_) => println!("Calibration saved"),
+                        Err(e) => println!("Failed to save calibration: {}", e),
+                    }
+                }
+                Command::GetCalibration => {
+                    let json = calibration.to_json();
+                    let _ = state_tx.send(StateUpdate::CalibrationData(json));
                 }
             }
         }
@@ -76,6 +98,8 @@ fn main() {
                 _ => {}
             }
             frame = frame.wrapping_add(1);
+
+            strip.render_calibrated(&calibration);
 
             // Send state to UI every 3rd frame (~20fps updates to browser)
             if frame % 3 == 0 {

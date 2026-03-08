@@ -18,5 +18,4 @@ pub fn audio_spectrum(strip: &mut LedStrip, bands: &[u8; 8]) {
             strip.set(i, color);
         }
     }
-    strip.render();
 }

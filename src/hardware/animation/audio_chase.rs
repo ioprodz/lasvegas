@@ -34,5 +34,4 @@ pub fn audio_chase(strip: &mut LedStrip, frame: usize, bands: &[u8; 8]) {
             strip.set(i, [0, 0, 0, 0]);
         }
     }
-    strip.render();
 }
