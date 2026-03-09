@@ -115,6 +115,10 @@ fn main() {
                 "audio_harmonic3" => hardware::animation::audio_harmonic3(strip, frame, &audio_analysis),
                 "audio_harmonic4" => hardware::animation::audio_harmonic4(strip, frame, &audio_analysis),
                 "audio_harmonic5" => hardware::animation::audio_harmonic5(strip, frame, &audio_analysis),
+                "audio_harmonic6" => hardware::animation::audio_harmonic6(strip, frame, &audio_analysis),
+                "audio_harmonic7" => hardware::animation::audio_harmonic7(strip, frame, &audio_analysis),
+                "audio_harmonic8" => hardware::animation::audio_harmonic8(strip, frame, &audio_analysis),
+                "audio_fire" => hardware::animation::audio_fire(strip, frame, &audio_analysis),
                 _ => {}
             }
             frame = frame.wrapping_add(1);

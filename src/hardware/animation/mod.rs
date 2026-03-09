@@ -19,6 +19,10 @@ mod audio_harmonic2;
 mod audio_harmonic3;
 mod audio_harmonic4;
 mod audio_harmonic5;
+mod audio_harmonic6;
+mod audio_harmonic7;
+mod audio_harmonic8;
+mod audio_fire;
 
 pub use rainbow::rainbow_cycle;
 pub use pulse::pulse;
@@ -41,3 +45,7 @@ pub use audio_harmonic2::audio_harmonic2;
 pub use audio_harmonic3::audio_harmonic3;
 pub use audio_harmonic4::audio_harmonic4;
 pub use audio_harmonic5::audio_harmonic5;
+pub use audio_harmonic6::audio_harmonic6;
+pub use audio_harmonic7::audio_harmonic7;
+pub use audio_harmonic8::audio_harmonic8;
+pub use audio_fire::audio_fire;
