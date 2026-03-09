@@ -103,10 +103,10 @@ pub fn audio_synesthesia4(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis
         let frame = s.frame;
 
         let kick_f = a.kick as f32 / 255.0;
-        let snare_f = a.snare as f32 / 255.0;
+        let _snare_f = a.snare as f32 / 255.0;
         let hihat_f = a.hihat as f32 / 255.0;
         let vocals_f = a.vocals as f32 / 255.0;
-        let bass_line_f = a.bass_line as f32 / 255.0;
+        let _bass_line_f = a.bass_line as f32 / 255.0;
         let beat_phase = a.beat_phase as f32 / 255.0;
         let bass_f = ((a.bands[0] as u16 + a.bands[1] as u16) / 2) as f32 / 255.0;
         let mid_f = ((a.bands[3] as u16 + a.bands[4] as u16) / 2) as f32 / 255.0;
