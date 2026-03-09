@@ -23,6 +23,9 @@ mod audio_harmonic6;
 mod audio_harmonic7;
 mod audio_harmonic8;
 mod audio_fire;
+mod pacman;
+mod retro_arcade;
+mod game_of_life;
 
 pub use rainbow::rainbow_cycle;
 pub use pulse::pulse;
@@ -49,3 +52,6 @@ pub use audio_harmonic6::audio_harmonic6;
 pub use audio_harmonic7::audio_harmonic7;
 pub use audio_harmonic8::audio_harmonic8;
 pub use audio_fire::audio_fire;
+pub use pacman::pacman;
+pub use retro_arcade::retro_arcade;
+pub use game_of_life::game_of_life;

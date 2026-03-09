@@ -119,6 +119,9 @@ fn main() {
                 "audio_harmonic7" => hardware::animation::audio_harmonic7(strip, frame, &audio_analysis),
                 "audio_harmonic8" => hardware::animation::audio_harmonic8(strip, frame, &audio_analysis),
                 "audio_fire" => hardware::animation::audio_fire(strip, frame, &audio_analysis),
+                "pacman" => hardware::animation::pacman(strip, frame, &audio_analysis),
+                "retro_arcade" => hardware::animation::retro_arcade(strip, frame, &audio_analysis),
+                "game_of_life" => hardware::animation::game_of_life(strip, frame, &audio_analysis),
                 _ => {}
             }
             frame = frame.wrapping_add(1);
