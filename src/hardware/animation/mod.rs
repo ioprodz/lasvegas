@@ -15,6 +15,7 @@ mod audio_synesthesia2;
 mod audio_synesthesia3;
 mod audio_synesthesia4;
 mod audio_harmonic;
+mod audio_harmonic2;
 
 pub use rainbow::rainbow_cycle;
 pub use pulse::pulse;
@@ -33,3 +34,4 @@ pub use audio_synesthesia2::audio_synesthesia2;
 pub use audio_synesthesia3::audio_synesthesia3;
 pub use audio_synesthesia4::audio_synesthesia4;
 pub use audio_harmonic::audio_harmonic;
+pub use audio_harmonic2::audio_harmonic2;
