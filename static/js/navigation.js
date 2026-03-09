@@ -34,8 +34,8 @@ navItems.forEach(item => {
             history.pushState({ page, anim }, '', path);
         }
 
-        // Start animation
-        if (ws && ws.readyState === WebSocket.OPEN) {
+        // Start animation (only if nav item specifies one)
+        if (anim && ws && ws.readyState === WebSocket.OPEN) {
             ws.send('animate:' + anim);
             setActiveAnim(anim);
         }
