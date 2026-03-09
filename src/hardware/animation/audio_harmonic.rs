@@ -157,7 +157,7 @@ pub fn audio_harmonic(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
         } else {
             s.energy += (raw_energy - s.energy) * 0.05;
         }
-        let energy = s.energy.max(0.15);
+        let energy = s.energy.max(0.3);
 
         // Energy bar smooth
         if mid_f > s.energy_smooth {
@@ -352,8 +352,7 @@ pub fn audio_harmonic(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                     let phase = PULSE_PHASE[slot % 6];
                     let pulse_mod = (frame as f32 * 0.08 * s.speed_mult + phase).sin() * 0.5 + 0.5;
                     let kick_boost = kick_f * 0.5;
-                    let brightness =
-                        ((bass_f + kick_boost) * (0.4 + pulse_mod * 0.6)).max(energy * 0.15);
+                    let brightness = ((bass_f + kick_boost) * (0.4 + pulse_mod * 0.6)).max(0.2);
                     let hue = if a.chord_root < 12 {
                         (NOTE_HUES[a.chord_root as usize] + s.palette_offset + slot as f32 * 30.0)
                             % 360.0
@@ -381,11 +380,7 @@ pub fn audio_harmonic(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                 2 => {
                     // ---- SPARKLE ----
                     let hihat_bg = hihat_f * 0.08;
-                    let bg = hsv_to_rgb(
-                        s.chord_hue,
-                        0.6,
-                        (bass_f * 0.12).max(hihat_bg).max(energy * 0.05),
-                    );
+                    let bg = hsv_to_rgb(s.chord_hue, 0.6, (bass_f * 0.2).max(hihat_bg).max(0.1));
                     fill_block(strip, col_start, block_width, bg);
                     for spark in s.sparks.iter() {
                         let spark_col = (spark.col_frac * block_width as f32) as usize;
@@ -419,7 +414,7 @@ pub fn audio_harmonic(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                 }
                 4 => {
                     // ---- ENERGY BAR ----
-                    let bar_energy = s.energy_smooth.max(vocals_f * 0.5).max(energy * 0.2);
+                    let bar_energy = s.energy_smooth.max(vocals_f * 0.5).max(0.25);
                     let half = block_width / 2;
                     let bar_half = (bar_energy * half as f32) as usize;
                     let hue = if vocals_f > 0.2 {
@@ -478,7 +473,7 @@ pub fn audio_harmonic(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                             let wave2 =
                                 ((x / (wavelength * 0.7) - frame as f32 * speed * 0.5).cos()) * 0.5
                                     + 0.5;
-                            let val = ((wave1 * 0.6 + wave2 * 0.4) * energy).max(energy * 0.08);
+                            let val = ((wave1 * 0.6 + wave2 * 0.4) * (0.3 + energy)).max(0.15);
                             let hue = (s.chord_hue + x * 2.0 + y * 15.0) % 360.0;
                             let led = row * COLS + col_start + col_off;
                             add_color(strip, led, hsv_to_rgb(hue, 0.9, val));
@@ -494,7 +489,7 @@ pub fn audio_harmonic(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
         // ============================================
         if kick_onset && s.kick_cooldown == 0 {
             s.kick_cooldown = 6;
-            let flash_color = hsv_to_rgb((s.chord_hue + 180.0) % 360.0, 0.3, kick_f * 0.15);
+            let flash_color = hsv_to_rgb((s.chord_hue + 180.0) % 360.0, 0.3, kick_f * 0.35);
             for i in 0..(COLS * ROWS) {
                 add_color(strip, i, flash_color);
             }

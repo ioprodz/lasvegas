@@ -384,9 +384,8 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                             } else {
                                 col_off
                             };
-                            let wave1 = (x as f32 / wave_stretch + t * speed + row_phase).sin()
-                                * 0.5
-                                + 0.5;
+                            let wave1 =
+                                (x as f32 / wave_stretch + t * speed + row_phase).sin() * 0.5 + 0.5;
                             let wave2 = (x as f32 / (wave_stretch * 1.6) - t * speed * 0.6
                                 + row_phase * 0.5)
                                 .sin()
@@ -506,7 +505,9 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                     // Bass drives left bar, vocals drive right bar.
                     // Where they overlap, brightness doubles.
                     let left_energy = s.bass_smooth.max(energy * 0.4).max(0.25);
-                    let right_energy = (vocals_f * 0.6 + s.mid_smooth * 0.4).max(energy * 0.4).max(0.25);
+                    let right_energy = (vocals_f * 0.6 + s.mid_smooth * 0.4)
+                        .max(energy * 0.4)
+                        .max(0.25);
                     let half = block_width / 2;
                     let left_extent = (left_energy * half as f32) as usize;
                     let right_extent = (right_energy * half as f32) as usize;
@@ -557,7 +558,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                         } else {
                             1.0
                         };
-                        let brightness = brightness * brightness * energy * 1.5;
+                        let brightness = brightness * brightness * (0.5 + energy * 1.5);
                         if brightness < 0.02 {
                             continue;
                         }
@@ -599,7 +600,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
 
         // ── Kick flash overlay ──
         if s.kick_flash > 0.05 {
-            let flash_b = s.kick_flash * 0.12;
+            let flash_b = s.kick_flash * 0.3;
             let color = hsv_to_rgb((s.chord_hue + 180.0) % 360.0, 0.2, flash_b);
             for i in 0..NUM_LEDS {
                 add_color(strip, i, color);
