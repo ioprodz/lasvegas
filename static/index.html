@@ -556,6 +556,21 @@
                 <button class="nav-item" data-page="audio" data-anim="audio_pastel">
                     <span class="icon">&#9673;</span> Pastel Sections
                 </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_hybrid">
+                    <span class="icon">&#9638;</span> Hybrid
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_synesthesia">
+                    <span class="icon">&#9835;</span> Synesthesia
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_synesthesia2">
+                    <span class="icon">&#9829;</span> Synesthesia V2
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_synesthesia3">
+                    <span class="icon">&#10036;</span> Synesthesia V3
+                </button>
+                <button class="nav-item" data-page="audio" data-anim="audio_synesthesia4">
+                    <span class="icon">&#9830;</span> Synesthesia V4
+                </button>
             </div>
 
             <div class="sidebar-divider"></div>
@@ -718,7 +733,10 @@
                     </div>
 
                     <div class="section-label">Frequency Bands</div>
-                    <canvas id="freq-canvas"></canvas>
+                    <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.2rem;">
+                        <canvas id="freq-canvas" style="margin-bottom:0;"></canvas>
+                        <div id="freq-stats" style="font-family:monospace;font-size:0.75rem;color:#888;line-height:1.8;min-width:160px;"></div>
+                    </div>
 
                     <div class="section-label">Audio Animations</div>
                     <div class="card-list" id="audio-anims">
@@ -753,6 +771,26 @@
                         <div class="anim-card" data-anim="audio_pastel">
                             <h3>Pastel Sections</h3>
                             <p>Each row breathes with soft pastel colors tied to a frequency range. Gentle fades with drifting hues.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_hybrid">
+                            <h3>Hybrid</h3>
+                            <p>Six blocks alternating Pulse and Chase. Each block has its own phase for varied, layered patterns.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_synesthesia">
+                            <h3>Synesthesia</h3>
+                            <p>See the music. 8-layer visualization: chord color wash, kick shockwaves, bass sine waves, melody tracker, snare flashes, hi-hat sparkles, beat breathing, and vocal glow.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_synesthesia2">
+                            <h3>Synesthesia V2</h3>
+                            <p>Block-based music visualization. Each block shows a different instrument — kick flashes, bass waves, melody trails, snare rings, hi-hat sparkles, vocal glow. Vivid saturated colors. Layout changes on musical sections.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_synesthesia3">
+                            <h3>Synesthesia V3</h3>
+                            <p>A melody dot with a vivid trail tracks pitch across the grid. When the dot moves fast, the block layout reshuffles — more speed means more blocks. Combines V1's dot trail with V2's instrument blocks.</p>
+                        </div>
+                        <div class="anim-card" data-anim="audio_synesthesia4">
+                            <h3>Synesthesia V4</h3>
+                            <p>Melody dot + hybrid blocks. The pitch-tracking dot with its vivid trail floats on top of hybrid's classic animations (pulse, chase, sparkle, energy bar, ripple). Fast melody movement reshuffles the layout.</p>
                         </div>
                     </div>
                 </div>
@@ -869,9 +907,110 @@
         // --- Audio Capture & Analysis ---
         let audioCtx = null;
         let analyser = null;
+        let pitchAnalyser = null; // separate high-res FFT for pitch detection
         let audioSource = null;
         let audioStream = null;
         let audioInterval = null;
+
+        // Pitch/chord detection state
+        const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+        let detectedNote = '—';
+        let detectedChord = '—';
+        let detectedFreq = 0;
+
+        function freqToNote(freq) {
+            if (freq < 20) return { name: '—', octave: 0, cents: 0 };
+            const semitone = 12 * Math.log2(freq / 440) + 69;
+            const rounded = Math.round(semitone);
+            const cents = Math.round((semitone - rounded) * 100);
+            const name = NOTE_NAMES[((rounded % 12) + 12) % 12];
+            const octave = Math.floor(rounded / 12) - 1;
+            return { name, octave, cents, midi: rounded };
+        }
+
+        // Find the top N frequency peaks in the FFT data
+        function findPeaks(freqData, sampleRate, fftSize, maxPeaks) {
+            const binHz = sampleRate / fftSize;
+            const peaks = [];
+            const minBin = Math.ceil(60 / binHz);  // ignore below 60Hz
+            const maxBin = Math.min(freqData.length - 1, Math.floor(4200 / binHz)); // up to ~4.2kHz
+
+            for (let i = minBin + 1; i < maxBin; i++) {
+                // Local maximum: higher than both neighbors and above a noise floor
+                if (freqData[i] > freqData[i-1] && freqData[i] > freqData[i+1] && freqData[i] > 30) {
+                    // Parabolic interpolation for sub-bin accuracy
+                    const alpha = freqData[i-1];
+                    const beta = freqData[i];
+                    const gamma = freqData[i+1];
+                    const denom = alpha - 2*beta + gamma;
+                    const p = denom !== 0 ? 0.5 * (alpha - gamma) / denom : 0;
+                    const interpFreq = (i + p) * binHz;
+                    peaks.push({ freq: interpFreq, amp: freqData[i] });
+                }
+            }
+
+            // Sort by amplitude descending, return top N
+            peaks.sort((a, b) => b.amp - a.amp);
+            return peaks.slice(0, maxPeaks);
+        }
+
+        // Simple chord detection from a set of detected notes
+        function detectChord(notes) {
+            if (notes.length < 2) return '—';
+
+            // Get unique pitch classes sorted, relative to the root
+            const root = notes[0]; // strongest peak = likely root
+            const intervals = new Set();
+            for (const n of notes) {
+                intervals.add(((n.midi - root.midi) % 12 + 12) % 12);
+            }
+
+            const has = (i) => intervals.has(i);
+            const rootName = root.name;
+
+            // Check common chord patterns (in semitone intervals from root)
+            if (has(4) && has(7)) {
+                if (has(11)) return rootName + 'maj7';
+                if (has(10)) return rootName + '7';
+                return rootName + ' maj';
+            }
+            if (has(3) && has(7)) {
+                if (has(10)) return rootName + 'm7';
+                return rootName + 'm';
+            }
+            if (has(4) && has(8)) return rootName + ' aug';
+            if (has(3) && has(6)) return rootName + ' dim';
+            if (has(5) && has(7)) return rootName + 'sus4';
+            if (has(2) && has(7)) return rootName + 'sus2';
+            if (has(7)) return rootName + '5';
+
+            return rootName + '?';
+        }
+
+        function updatePitchDetection() {
+            if (!pitchAnalyser || !audioCtx) return;
+            const fftSize = pitchAnalyser.fftSize;
+            const freqData = new Uint8Array(pitchAnalyser.frequencyBinCount);
+            pitchAnalyser.getByteFrequencyData(freqData);
+
+            const peaks = findPeaks(freqData, audioCtx.sampleRate, fftSize, 6);
+
+            if (peaks.length > 0) {
+                detectedFreq = peaks[0].freq;
+                const note = freqToNote(peaks[0].freq);
+                detectedNote = note.name + note.octave;
+
+                // Get note info for top peaks for chord detection
+                const noteInfos = peaks
+                    .filter(p => p.amp > peaks[0].amp * 0.3) // at least 30% of strongest
+                    .map(p => ({ ...freqToNote(p.freq), amp: p.amp }));
+                detectedChord = detectChord(noteInfos);
+            } else {
+                detectedNote = '—';
+                detectedChord = '—';
+                detectedFreq = 0;
+            }
+        }
 
         // Web Worker timer — not throttled when tab is backgrounded
         const timerWorkerBlob = new Blob([`
@@ -944,8 +1083,14 @@
                 analyser.fftSize = 512;
                 analyser.smoothingTimeConstant = 0.8;
 
+                // High-res analyser for pitch/chord detection
+                pitchAnalyser = audioCtx.createAnalyser();
+                pitchAnalyser.fftSize = 4096;
+                pitchAnalyser.smoothingTimeConstant = 0.85;
+
                 audioSource = audioCtx.createMediaStreamSource(audioStream);
                 audioSource.connect(analyser);
+                audioSource.connect(pitchAnalyser);
 
                 const freqData = new Uint8Array(analyser.frequencyBinCount);
 
@@ -953,11 +1098,57 @@
                     if (!analyser) return;
                     analyser.getByteFrequencyData(freqData);
                     const bands = computeBands(freqData);
+                    updatePitchDetection();
                     if (document.visibilityState === 'visible') drawVisualizer(bands);
                     if (ws && ws.readyState === WebSocket.OPEN) {
-                        const msg = new Uint8Array(1 + bands.length);
-                        msg[0] = 0x02;
-                        msg.set(bands, 1);
+                        // Send extended audio analysis (0x03)
+                        // Format: [0x03, bands[8], kick, snare, hihat, vocals,
+                        //          bassline, bpm_hi, bpm_lo, beat_phase,
+                        //          note_midi, chord_root, chord_quality]
+                        const bpm = Math.round(estimatedBPM) || 0;
+                        const chordRootVal = detectedChord === '—' ? 255
+                            : NOTE_NAMES.indexOf(detectedChord.replace(/[^A-G#]/g, '').substring(0, 2))
+                              !== -1 ? NOTE_NAMES.indexOf(detectedChord.replace(/[^A-G#]/g, '').substring(0, 2)) : 255;
+                        let chordQual = 255;
+                        if (detectedChord !== '—') {
+                            const q = detectedChord.toLowerCase();
+                            if (q.includes('maj7')) chordQual = 5;
+                            else if (q.includes('m7')) chordQual = 6;
+                            else if (q.includes('dim')) chordQual = 2;
+                            else if (q.includes('aug')) chordQual = 3;
+                            else if (q.includes('sus2')) chordQual = 7;
+                            else if (q.includes('sus4')) chordQual = 8;
+                            else if (q.includes('7')) chordQual = 4;
+                            else if (q.includes('5')) chordQual = 9;
+                            else if (q.includes('m')) chordQual = 1;
+                            else if (q.includes('maj')) chordQual = 0;
+                        }
+                        // Parse chord root from detectedChord string
+                        let parsedRoot = 255;
+                        if (detectedChord !== '—') {
+                            const rootStr = detectedChord.match(/^[A-G]#?/);
+                            if (rootStr) {
+                                const idx = NOTE_NAMES.indexOf(rootStr[0]);
+                                if (idx >= 0) parsedRoot = idx;
+                            }
+                        }
+                        // Get MIDI note
+                        const midiNote = detectedFreq > 0 ? Math.round(12 * Math.log2(detectedFreq / 440) + 69) : 0;
+
+                        const msg = new Uint8Array(20);
+                        msg[0] = 0x03;
+                        for (let i = 0; i < 8; i++) msg[1 + i] = bands[i];
+                        msg[9]  = Math.min(255, Math.round(indKick * 255));
+                        msg[10] = Math.min(255, Math.round(indSnare * 255));
+                        msg[11] = Math.min(255, Math.round(indHihat * 255));
+                        msg[12] = Math.min(255, Math.round(indVocals * 255));
+                        msg[13] = Math.min(255, Math.round(indBassLine * 255));
+                        msg[14] = (bpm >> 8) & 0xFF;
+                        msg[15] = bpm & 0xFF;
+                        msg[16] = Math.min(255, Math.round(beatPhase * 255));
+                        msg[17] = Math.max(0, Math.min(127, midiNote));
+                        msg[18] = parsedRoot;
+                        msg[19] = chordQual;
                         ws.send(msg.buffer);
                     }
                 };
@@ -976,7 +1167,7 @@
             if (audioSource) audioSource.disconnect();
             if (audioStream) audioStream.getTracks().forEach(t => t.stop());
             if (audioCtx) audioCtx.close();
-            audioCtx = null; analyser = null; audioSource = null; audioStream = null; audioInterval = null;
+            audioCtx = null; analyser = null; pitchAnalyser = null; audioSource = null; audioStream = null; audioInterval = null;
             document.getElementById('btn-mic').classList.remove('active');
             document.getElementById('btn-system').classList.remove('active');
             document.getElementById('btn-stop-audio').disabled = true;
@@ -989,6 +1180,22 @@
             '#ff0000', '#ff4400', '#ff8800', '#44ff00',
             '#00ffaa', '#0088ff', '#4400ff', '#aa00ff'
         ];
+
+        // ---- Audio analysis state ----
+        const prevBands = new Float32Array(8);
+        let prevBassVal = 0;
+        let prevMidVal = 0;
+        let prevHighVal = 0;
+        // BPM tracking: store timestamps of bass onsets
+        const bassOnsets = []; // timestamps in ms
+        let lastOnsetTime = 0;
+        let estimatedBPM = 0;
+        let beatPhase = 0;
+        let beatInterval = 0; // ms between beats
+        // Smoothed instrument indicators (0–1)
+        let indKick = 0, indSnare = 0, indHihat = 0;
+        let indVocals = 0, indBassLine = 0;
+        let spectralFlux = 0;
 
         function drawVisualizer(bands) {
             const canvas = document.getElementById('freq-canvas');
@@ -1019,6 +1226,128 @@
                 ctx.textAlign = 'center';
                 ctx.fillText(bandLabels[i], x + barW/2, h - 4);
             }
+
+            // ---- Spectral analysis ----
+            const now = performance.now();
+            const total = bands.reduce((a, b) => a + b, 0) || 1;
+            const norm = Array.from(bands).map(b => b / total);
+            const centroid = norm.reduce((sum, n, i) => sum + i * n, 0);
+            const variance = norm.reduce((sum, n, i) => {
+                const d = i - centroid;
+                return sum + d * d * n;
+            }, 0);
+            const spread = Math.sqrt(variance);
+            const bassRatio = (norm[0] + norm[1]) * 100;
+            const midRatio = (norm[2] + norm[3] + norm[4]) * 100;
+            const highRatio = (norm[5] + norm[6] + norm[7]) * 100;
+            const peak = Math.max(...bands);
+            const dominant = bandLabels[bands.indexOf(peak)];
+
+            // ---- Spectral flux (rate of change) ----
+            let flux = 0;
+            for (let i = 0; i < 8; i++) {
+                const d = bands[i] - prevBands[i];
+                if (d > 0) flux += d; // only positive changes (onsets)
+                prevBands[i] = bands[i];
+            }
+            spectralFlux = spectralFlux * 0.7 + flux * 0.3;
+
+            // ---- Instrument detection heuristics ----
+            const bassVal = (bands[0] + bands[1]) / 2;
+            const midVal = (bands[2] + bands[3] + bands[4]) / 3;
+            const highVal = (bands[5] + bands[6] + bands[7]) / 3;
+
+            // Kick: sharp bass transient (big rise in bass)
+            const bassDelta = Math.max(0, bassVal - prevBassVal);
+            const kickRaw = bassDelta > 25 ? Math.min(1, bassDelta / 80) : 0;
+            indKick = indKick * 0.6 + kickRaw * 0.4;
+
+            // Snare: sharp transient in mid+high (bands 3-5)
+            const midDelta = Math.max(0, midVal - prevMidVal);
+            const highDelta = Math.max(0, highVal - prevHighVal);
+            const snareRaw = (midDelta + highDelta) > 40 ? Math.min(1, (midDelta + highDelta) / 120) : 0;
+            indSnare = indSnare * 0.6 + snareRaw * 0.4;
+
+            // Hi-hat: sustained high-frequency energy (bands 6-7)
+            const hihatRaw = Math.min(1, (bands[6] + bands[7]) / 300);
+            indHihat = indHihat * 0.8 + hihatRaw * 0.2;
+
+            // Vocals: sustained mid energy (bands 2-4) with moderate
+            // spread and centroid in the 2-5 range
+            const vocalZone = centroid > 1.5 && centroid < 5.5 && spread < 2.2;
+            const midSustain = midVal > 60;
+            const vocalRaw = (vocalZone && midSustain) ? Math.min(1, midVal / 180) : 0;
+            indVocals = indVocals * 0.9 + vocalRaw * 0.1;
+
+            // Bass line: sustained low energy without sharp transients
+            const bassLineSustain = bassVal > 80 && bassDelta < 20;
+            const bassLineRaw = bassLineSustain ? Math.min(1, bassVal / 200) : 0;
+            indBassLine = indBassLine * 0.9 + bassLineRaw * 0.1;
+
+            prevBassVal = bassVal;
+            prevMidVal = midVal;
+            prevHighVal = highVal;
+
+            // ---- BPM estimation from bass onsets ----
+            if (kickRaw > 0.3 && (now - lastOnsetTime) > 200) { // min 200ms between onsets
+                bassOnsets.push(now);
+                lastOnsetTime = now;
+                // Keep last 20 onsets (enough for stable estimate)
+                while (bassOnsets.length > 20) bassOnsets.shift();
+
+                if (bassOnsets.length >= 4) {
+                    // Compute median interval between consecutive onsets
+                    const intervals = [];
+                    for (let i = 1; i < bassOnsets.length; i++) {
+                        intervals.push(bassOnsets[i] - bassOnsets[i - 1]);
+                    }
+                    intervals.sort((a, b) => a - b);
+                    const median = intervals[Math.floor(intervals.length / 2)];
+                    beatInterval = median;
+                    estimatedBPM = 60000 / median;
+                    // Clamp to reasonable range: if double/half, adjust
+                    if (estimatedBPM > 200) estimatedBPM /= 2;
+                    if (estimatedBPM < 50) estimatedBPM *= 2;
+                }
+            }
+
+            // Beat phase: 0–1 position within current beat
+            if (beatInterval > 0) {
+                beatPhase = ((now - lastOnsetTime) % beatInterval) / beatInterval;
+            }
+
+            // ---- Render stats ----
+            const bar = (val, color) => {
+                const w = Math.round(val * 100);
+                return `<span style="display:inline-block;width:${w}%;max-width:80px;height:6px;background:${color};border-radius:2px;vertical-align:middle;"></span>`;
+            };
+
+            const el = document.getElementById('freq-stats');
+            el.innerHTML =
+                `<span style="color:#888;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em">Spectrum</span><br>` +
+                `<span style="color:#e0e0e0">Centroid</span> ${centroid.toFixed(2)}` +
+                ` <span style="color:#e0e0e0">Spread</span> ${spread.toFixed(2)}<br>` +
+                `<span style="color:#e0e0e0">Dominant</span> ${dominant}` +
+                ` <span style="color:#e0e0e0">Flux</span> ${Math.round(spectralFlux)}<br>` +
+                `<span style="color:#ff6666">Bass</span> ${bassRatio.toFixed(0)}%` +
+                ` <span style="color:#44ff88">Mid</span> ${midRatio.toFixed(0)}%` +
+                ` <span style="color:#6688ff">High</span> ${highRatio.toFixed(0)}%<br>` +
+                `<br>` +
+                `<span style="color:#888;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em">Tempo</span><br>` +
+                `<span style="color:#e0e0e0">BPM</span> ${estimatedBPM > 0 ? Math.round(estimatedBPM) : '—'}` +
+                ` <span style="color:#e0e0e0">Phase</span> ${beatPhase.toFixed(2)}<br>` +
+                `<br>` +
+                `<span style="color:#888;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em">Pitch</span><br>` +
+                `<span style="color:#fff;font-size:1.1rem;font-weight:600">${detectedNote}</span>` +
+                ` <span style="color:#888">${detectedFreq > 0 ? Math.round(detectedFreq) + 'Hz' : ''}</span><br>` +
+                `<span style="color:#e0e0e0">Chord</span> <span style="color:#ffcc44;font-weight:500">${detectedChord}</span><br>` +
+                `<br>` +
+                `<span style="color:#888;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em">Instruments</span><br>` +
+                `<span style="color:#ff4444">Kick</span>  ${bar(indKick, '#ff4444')}<br>` +
+                `<span style="color:#ffaa44">Snare</span> ${bar(indSnare, '#ffaa44')}<br>` +
+                `<span style="color:#ffff66">HiHat</span> ${bar(indHihat, '#ffff66')}<br>` +
+                `<span style="color:#44ddff">Vocal</span> ${bar(indVocals, '#44ddff')}<br>` +
+                `<span style="color:#ff66aa">Bass</span>  ${bar(indBassLine, '#ff66aa')}`;
         }
 
         document.getElementById('btn-mic').addEventListener('click', () => startAudio('mic'));

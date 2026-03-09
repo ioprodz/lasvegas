@@ -2,7 +2,7 @@ mod command;
 mod hardware;
 mod web;
 
-use command::{Command, StateUpdate};
+use command::{AudioAnalysis, Command, StateUpdate};
 use hardware::calibration::Calibration;
 use hardware::led::LedStrip;
 use std::sync::mpsc;
@@ -32,6 +32,7 @@ fn main() {
     let mut active_animation: Option<String> = None;
     let mut frame: usize = 0;
     let mut audio_bands: [u8; 8] = [0; 8];
+    let mut audio_analysis = AudioAnalysis::default();
     let frame_duration = Duration::from_millis(16); // ~60fps
 
     loop {
@@ -65,6 +66,10 @@ fn main() {
                     for (i, &b) in bands.iter().enumerate().take(8) {
                         audio_bands[i] = b;
                     }
+                }
+                Command::ExtendedAudioData(analysis) => {
+                    audio_bands = analysis.bands;
+                    audio_analysis = analysis;
                 }
                 Command::SetCalibration(cal) => {
                     calibration = cal;
@@ -100,6 +105,11 @@ fn main() {
                 "audio_sparkle" => hardware::animation::audio_sparkle(strip, &audio_bands),
                 "audio_energy" => hardware::animation::audio_energy(strip, &audio_bands),
                 "audio_pastel" => hardware::animation::audio_pastel(strip, &audio_bands),
+                "audio_hybrid" => hardware::animation::audio_hybrid(strip, frame, &audio_bands),
+                "audio_synesthesia" => hardware::animation::audio_synesthesia(strip, frame, &audio_analysis),
+                "audio_synesthesia2" => hardware::animation::audio_synesthesia2(strip, frame, &audio_analysis),
+                "audio_synesthesia3" => hardware::animation::audio_synesthesia3(strip, frame, &audio_analysis),
+                "audio_synesthesia4" => hardware::animation::audio_synesthesia4(strip, frame, &audio_analysis),
                 _ => {}
             }
             frame = frame.wrapping_add(1);

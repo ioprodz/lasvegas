@@ -40,6 +40,11 @@ impl LedStrip {
         self.controller.leds_mut(0)[index] = color;
     }
 
+    /// Direct read access to LED buffer (for blending operations).
+    pub fn controller_leds(&mut self) -> &mut [[u8; 4]] {
+        self.controller.leds_mut(0)
+    }
+
     pub fn set_all(&mut self, color: [u8; 4]) {
         for led in self.controller.leds_mut(0) {
             *led = color;
