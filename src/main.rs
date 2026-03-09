@@ -114,6 +114,7 @@ fn main() {
                 "audio_harmonic2" => hardware::animation::audio_harmonic2(strip, frame, &audio_analysis),
                 "audio_harmonic3" => hardware::animation::audio_harmonic3(strip, frame, &audio_analysis),
                 "audio_harmonic4" => hardware::animation::audio_harmonic4(strip, frame, &audio_analysis),
+                "audio_harmonic5" => hardware::animation::audio_harmonic5(strip, frame, &audio_analysis),
                 _ => {}
             }
             frame = frame.wrapping_add(1);
