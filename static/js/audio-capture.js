@@ -83,7 +83,10 @@ async function startAudio(mode) {
             analyser.getByteFrequencyData(freqData);
             const bands = computeBands(freqData);
             updatePitchDetection();
-            if (document.visibilityState === 'visible') drawVisualizer(bands);
+            if (document.visibilityState === 'visible') {
+                drawVisualizer(bands);
+                updateChromaticCircle();
+            }
             if (ws && ws.readyState === WebSocket.OPEN) {
                 const bpm = Math.round(estimatedBPM) || 0;
                 let chordQual = 255;

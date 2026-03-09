@@ -207,6 +207,14 @@ body {
     max-width: 400px;
     height: 100px;
 }
+#chromatic-circle {
+    background: #111119;
+    border-radius: 8px;
+    display: block;
+    width: 220px;
+    height: 220px;
+    flex-shrink: 0;
+}
 
 /* Calibration page */
 .cal-section {

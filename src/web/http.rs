@@ -9,6 +9,7 @@ const JS_NAVIGATION: &str = include_str!("../../static/js/navigation.js");
 const JS_ANIMATION: &str = include_str!("../../static/js/animation.js");
 const JS_AUDIO_ANALYSIS: &str = include_str!("../../static/js/audio-analysis.js");
 const JS_VISUALIZER: &str = include_str!("../../static/js/visualizer.js");
+const JS_CHROMATIC_CIRCLE: &str = include_str!("../../static/js/chromatic-circle.js");
 const JS_AUDIO_CAPTURE: &str = include_str!("../../static/js/audio-capture.js");
 const JS_CALIBRATION: &str = include_str!("../../static/js/calibration.js");
 const JS_APP: &str = include_str!("../../static/js/app.js");
@@ -59,6 +60,9 @@ pub fn start(addr: &str) {
                     serve(&mut stream, "application/javascript", JS_AUDIO_ANALYSIS)
                 }
                 "/js/visualizer.js" => serve(&mut stream, "application/javascript", JS_VISUALIZER),
+                "/js/chromatic-circle.js" => {
+                    serve(&mut stream, "application/javascript", JS_CHROMATIC_CIRCLE)
+                }
                 "/js/audio-capture.js" => {
                     serve(&mut stream, "application/javascript", JS_AUDIO_CAPTURE)
                 }
