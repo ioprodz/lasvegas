@@ -228,85 +228,87 @@
 
                 <!-- Audio page -->
                 <div id="page-audio" class="page">
-                    <div class="content-header">
-                        <h2>Audio Reactive</h2>
-                    </div>
+                    <div class="audio-split">
+                        <!-- Left: scrollable animation list -->
+                        <div class="audio-split-left">
+                            <div class="section-label">Audio Animations</div>
+                            <div class="audio-anim-list" id="audio-anims">
+                                <div class="anim-card" data-anim="audio_spectrum">
+                                    <h3>Spectrum</h3>
+                                    <p>Frequency bands as colored bars across the strip. Bass=red, treble=blue.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_pulse">
+                                    <h3>Audio Pulse</h3>
+                                    <p>Whole strip pulses with bass. Color shifts with treble energy.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_chase">
+                                    <h3>Audio Chase</h3>
+                                    <p>Light chases around strip. Speed from bass, color from dominant frequency.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_ripple">
+                                    <h3>Beat Ripple</h3>
+                                    <p>Bass beats spawn expanding color waves from the center. Multiple ripples layer and blend.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_waterfall">
+                                    <h3>Waterfall</h3>
+                                    <p>Scrolling spectrogram across the 60x6 grid. Each row is a frequency range, time flows left.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_sparkle">
+                                    <h3>Sparkle Rain</h3>
+                                    <p>High frequencies spawn bright sparks at random positions. Bass drives a warm background glow.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_energy">
+                                    <h3>Energy Bars</h3>
+                                    <p>Each row is a frequency band with centered energy bars. Smooth attack/decay for fluid motion.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_pastel">
+                                    <h3>Pastel Sections</h3>
+                                    <p>Each row breathes with soft pastel colors tied to a frequency range. Gentle fades with drifting hues.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_hybrid">
+                                    <h3>Hybrid</h3>
+                                    <p>Six blocks alternating Pulse and Chase. Each block has its own phase for varied, layered patterns.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_synesthesia">
+                                    <h3>Synesthesia</h3>
+                                    <p>See the music. 8-layer visualization: chord color wash, kick shockwaves, bass sine waves, melody tracker, snare flashes, hi-hat sparkles, beat breathing, and vocal glow.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_synesthesia2">
+                                    <h3>Synesthesia V2</h3>
+                                    <p>Block-based music visualization. Each block shows a different instrument. Vivid saturated colors. Layout changes on musical sections.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_synesthesia3">
+                                    <h3>Synesthesia V3</h3>
+                                    <p>A melody dot with a vivid trail tracks pitch across the grid. When the dot moves fast, the block layout reshuffles.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_synesthesia4">
+                                    <h3>Synesthesia V4</h3>
+                                    <p>Melody dot + hybrid blocks. The pitch-tracking dot floats on top of hybrid's classic animations. Fast melody movement reshuffles the layout.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_harmonic">
+                                    <h3>Harmonic Memory</h3>
+                                    <p>Deterministic chord-progression-driven layout. Same chord sequence always produces the same block configuration and colors. Note transitions create traveling lights across the strip.</p>
+                                </div>
+                                <div class="anim-card" data-anim="audio_harmonic2">
+                                    <h3>Harmonic V2</h3>
+                                    <p>Symmetric, cohesive blocks designed for 6x60. Aurora curtains, diamond breathe, rain, gradient sweep, mirror bars, and firefly drift. Mirrored layout for visual balance. Same chords = same look.</p>
+                                </div>
+                            </div>
+                        </div>
 
-                    <div class="section-label">Audio Source</div>
-                    <div class="audio-controls">
-                        <button class="audio-btn" id="btn-mic">Microphone</button>
-                        <button class="audio-btn" id="btn-system">System Audio (Tab)</button>
-                        <button class="audio-btn" id="btn-stop-audio" disabled>Stop Audio</button>
-                    </div>
+                        <!-- Right: fixed controls & visualizer -->
+                        <div class="audio-split-right">
+                            <div class="section-label">Audio Source</div>
+                            <div class="audio-controls">
+                                <button class="audio-btn" id="btn-mic">Microphone</button>
+                                <button class="audio-btn" id="btn-system">System Audio (Tab)</button>
+                                <button class="audio-btn" id="btn-stop-audio" disabled>Stop Audio</button>
+                            </div>
 
-                    <div class="section-label">Frequency Bands</div>
-                    <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.2rem;">
-                        <canvas id="freq-canvas" style="margin-bottom:0;"></canvas>
-                        <div id="freq-stats" style="font-family:monospace;font-size:0.75rem;color:#888;line-height:1.8;min-width:160px;"></div>
-                        <canvas id="chromatic-circle"></canvas>
-                    </div>
-
-                    <div class="section-label">Audio Animations</div>
-                    <div class="card-list" id="audio-anims">
-                        <div class="anim-card" data-anim="audio_spectrum">
-                            <h3>Spectrum</h3>
-                            <p>Frequency bands as colored bars across the strip. Bass=red, treble=blue.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_pulse">
-                            <h3>Audio Pulse</h3>
-                            <p>Whole strip pulses with bass. Color shifts with treble energy.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_chase">
-                            <h3>Audio Chase</h3>
-                            <p>Light chases around strip. Speed from bass, color from dominant frequency.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_ripple">
-                            <h3>Beat Ripple</h3>
-                            <p>Bass beats spawn expanding color waves from the center. Multiple ripples layer and blend.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_waterfall">
-                            <h3>Waterfall</h3>
-                            <p>Scrolling spectrogram across the 60x6 grid. Each row is a frequency range, time flows left.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_sparkle">
-                            <h3>Sparkle Rain</h3>
-                            <p>High frequencies spawn bright sparks at random positions. Bass drives a warm background glow.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_energy">
-                            <h3>Energy Bars</h3>
-                            <p>Each row is a frequency band with centered energy bars. Smooth attack/decay for fluid motion.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_pastel">
-                            <h3>Pastel Sections</h3>
-                            <p>Each row breathes with soft pastel colors tied to a frequency range. Gentle fades with drifting hues.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_hybrid">
-                            <h3>Hybrid</h3>
-                            <p>Six blocks alternating Pulse and Chase. Each block has its own phase for varied, layered patterns.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_synesthesia">
-                            <h3>Synesthesia</h3>
-                            <p>See the music. 8-layer visualization: chord color wash, kick shockwaves, bass sine waves, melody tracker, snare flashes, hi-hat sparkles, beat breathing, and vocal glow.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_synesthesia2">
-                            <h3>Synesthesia V2</h3>
-                            <p>Block-based music visualization. Each block shows a different instrument. Vivid saturated colors. Layout changes on musical sections.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_synesthesia3">
-                            <h3>Synesthesia V3</h3>
-                            <p>A melody dot with a vivid trail tracks pitch across the grid. When the dot moves fast, the block layout reshuffles.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_synesthesia4">
-                            <h3>Synesthesia V4</h3>
-                            <p>Melody dot + hybrid blocks. The pitch-tracking dot floats on top of hybrid's classic animations. Fast melody movement reshuffles the layout.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_harmonic">
-                            <h3>Harmonic Memory</h3>
-                            <p>Deterministic chord-progression-driven layout. Same chord sequence always produces the same block configuration and colors. Note transitions create traveling lights across the strip.</p>
-                        </div>
-                        <div class="anim-card" data-anim="audio_harmonic2">
-                            <h3>Harmonic V2</h3>
-                            <p>Symmetric, cohesive blocks designed for 6×60. Aurora curtains, diamond breathe, rain, gradient sweep, mirror bars, and firefly drift. Mirrored layout for visual balance. Same chords = same look.</p>
+                            <div class="section-label">Frequency Bands</div>
+                            <canvas id="freq-canvas"></canvas>
+                            <div id="freq-stats" style="font-family:monospace;font-size:0.75rem;color:#888;line-height:1.8;"></div>
+                            <canvas id="chromatic-circle"></canvas>
                         </div>
                     </div>
                 </div>

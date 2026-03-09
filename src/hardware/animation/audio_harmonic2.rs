@@ -192,7 +192,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
         smooth(&mut s.bass_smooth, bass_f, 0.4, 0.08);
         smooth(&mut s.mid_smooth, mid_f, 0.35, 0.08);
         smooth(&mut s.treble_smooth, high_f, 0.3, 0.1);
-        let energy = s.energy.max(0.12);
+        let energy = s.energy.max(0.3);
 
         // ── Chord hue ──
         if a.chord_root < 12 {
@@ -318,7 +318,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
 
         // ── Global: subtle beat breathing on all LEDs ──
         {
-            let breath = s.beat_brightness * energy * 0.06;
+            let breath = s.beat_brightness * energy * 0.15;
             if breath > 0.01 {
                 let color = hsv_to_rgb(s.chord_hue, 0.3, breath);
                 for i in 0..NUM_LEDS {
@@ -346,7 +346,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
 
                 for row in 0..ROWS {
                     let wave = ((row as f32 * tr.freq + t * 0.1).sin() * 0.5 + 0.5) * x_fade;
-                    let b = wave * alpha * 0.7;
+                    let b = wave * alpha;
                     if b < 0.02 {
                         continue;
                     }
@@ -393,7 +393,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                                 * 0.5
                                 + 0.5;
                             let combined = wave1 * 0.6 + wave2 * 0.4;
-                            let val = (combined * energy * 1.2).max(energy * 0.06);
+                            let val = (combined * (0.3 + energy * 1.5)).max(0.15);
                             // Hue shifts per row for depth
                             let hue = (s.chord_hue + row as f32 * 20.0 + x as f32 * 0.8) % 360.0;
                             let led = row * COLS + col_start + col_off;
@@ -426,7 +426,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                             let ring1 = ((diamond_dist - ring_size).abs() / 2.5).min(1.0);
                             let ring2 = ((diamond_dist - ring_size * 0.5).abs() / 2.0).min(1.0);
                             let val = ((1.0 - ring1) * 0.7 + (1.0 - ring2) * 0.3)
-                                * energy
+                                * (0.4 + energy * 0.8)
                                 * (0.6 + s.beat_brightness * 0.4);
                             if val < 0.02 {
                                 continue;
@@ -463,7 +463,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                                     continue;
                                 }
                                 let x_fade = if dc == 0 { 1.0 } else { 0.25 };
-                                let b = y_fade * x_fade * drop.brightness * energy;
+                                let b = y_fade * x_fade * drop.brightness * (0.5 + energy);
                                 if b < 0.02 {
                                     continue;
                                 }
@@ -494,7 +494,7 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                             let hue = (s.chord_hue + grad_pos * 120.0) % 360.0;
                             // Brightness: center of gradient is brighter
                             let center_dist = (grad_pos - 0.5).abs() * 2.0;
-                            let val = ((1.0 - center_dist * 0.5) * energy * 1.1).max(energy * 0.08);
+                            let val = ((1.0 - center_dist * 0.5) * (0.3 + energy * 1.2)).max(0.15);
                             let led = row * COLS + col_start + col_off;
                             add_color(strip, led, hsv_to_rgb(hue, sat, val));
                         }
@@ -505,8 +505,8 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                     // Two energy bars growing from edges toward center.
                     // Bass drives left bar, vocals drive right bar.
                     // Where they overlap, brightness doubles.
-                    let left_energy = s.bass_smooth.max(energy * 0.2);
-                    let right_energy = (vocals_f * 0.6 + s.mid_smooth * 0.4).max(energy * 0.2);
+                    let left_energy = s.bass_smooth.max(energy * 0.4).max(0.25);
+                    let right_energy = (vocals_f * 0.6 + s.mid_smooth * 0.4).max(energy * 0.4).max(0.25);
                     let half = block_width / 2;
                     let left_extent = (left_energy * half as f32) as usize;
                     let right_extent = (right_energy * half as f32) as usize;
@@ -525,14 +525,14 @@ pub fn audio_harmonic2(strip: &mut LedStrip, _frame: usize, a: &AudioAnalysis) {
                             // Left bar: grows from col 0
                             if x < left_extent {
                                 let fade = 1.0 - x as f32 / left_extent.max(1) as f32;
-                                let b = fade * fade * energy;
+                                let b = fade * fade * (0.4 + energy);
                                 add_color(strip, led, hsv_to_rgb(hue_l, 0.9, b));
                             }
                             // Right bar: grows from col block_width-1
                             let from_right = block_width - 1 - x;
                             if from_right < right_extent {
                                 let fade = 1.0 - from_right as f32 / right_extent.max(1) as f32;
-                                let b = fade * fade * energy;
+                                let b = fade * fade * (0.4 + energy);
                                 add_color(strip, led, hsv_to_rgb(hue_r, 0.9, b));
                             }
                         }

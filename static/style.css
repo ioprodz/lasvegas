@@ -144,6 +144,7 @@ body {
 /* Page content */
 .page { display: none; }
 .page.active { display: block; }
+#page-audio.active { display: flex; }
 
 /* Cards */
 .card-list {
@@ -198,6 +199,40 @@ body {
 .audio-btn.active { background: #132e28; border-color: #4ecdc4; color: #4ecdc4; }
 .audio-btn:disabled { opacity: 0.3; cursor: default; }
 
+/* Audio split layout */
+.audio-split {
+    display: flex;
+    gap: 1.5rem;
+    height: calc(100vh - 120px);
+}
+.audio-split-left {
+    flex: 0 0 33%;
+    max-width: 33%;
+    min-width: 0;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+.audio-split-right {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+}
+.audio-anim-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+@media (max-width: 768px) {
+    .audio-split {
+        flex-direction: column-reverse;
+        height: auto;
+    }
+    .audio-split-right {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
 #freq-canvas {
     background: #111119;
     border-radius: 8px;
@@ -214,6 +249,7 @@ body {
     width: 220px;
     height: 220px;
     flex-shrink: 0;
+    margin-top: 1rem;
 }
 
 /* Calibration page */
