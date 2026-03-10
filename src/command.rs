@@ -14,6 +14,7 @@ pub struct AudioAnalysis {
     pub beat_phase: u8,    // 0–255 maps to 0.0–1.0
     pub note_midi: u8,     // MIDI note number, 0 = none
     pub chord_root: u8,    // 0–11 = C–B, 255 = none
+    #[allow(dead_code)]
     pub chord_quality: u8, // 0=maj 1=min 2=dim 3=aug 4=7 5=maj7 6=m7 7=sus2 8=sus4 9=5 255=?
 }
 
