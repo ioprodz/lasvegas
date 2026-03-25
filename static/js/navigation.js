@@ -9,6 +9,7 @@ const pages = document.querySelectorAll('.page');
 const PAGE_PATHS = {
     animations: '/animations',
     audio: '/audio',
+    bluetooth: '/bluetooth',
     calibrate: '/calibrate',
 };
 
@@ -58,6 +59,9 @@ function routeFromPath() {
     const path = window.location.pathname;
     if (path === '/audio') {
         showPage('audio');
+    } else if (path === '/bluetooth') {
+        showPage('bluetooth');
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send('bt:list');
     } else if (path === '/calibrate') {
         showPage('calibrate');
         if (ws && ws.readyState === WebSocket.OPEN) ws.send('get_calibration');

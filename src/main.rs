@@ -5,9 +5,34 @@ mod web;
 use command::{AudioAnalysis, Command, StateUpdate};
 use hardware::calibration::Calibration;
 use hardware::led::LedStrip;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
-use std::thread;
+use std::sync::Arc;
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
+
+/// Refresh both Bluetooth device list and audio device list (called after BT operations).
+fn refresh_bt_and_audio(tx: &mpsc::Sender<StateUpdate>) {
+    let bt_devices = hardware::bluetooth::list_devices();
+    let bt_json = hardware::bluetooth::devices_to_json(&bt_devices);
+    let _ = tx.send(StateUpdate::BtDeviceList(bt_json));
+
+    let audio_devices = hardware::audio::list_input_devices();
+    let audio_json: Vec<String> = audio_devices
+        .iter()
+        .map(|d| {
+            format!(
+                r#"{{"id":"{}","name":"{}"}}"#,
+                d.id.replace('"', r#"\""#),
+                d.name.replace('"', r#"\""#)
+            )
+        })
+        .collect();
+    let _ = tx.send(StateUpdate::AudioDeviceList(format!(
+        "[{}]",
+        audio_json.join(",")
+    )));
+}
 
 fn main() {
     // Hardware
@@ -22,11 +47,19 @@ fn main() {
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
     let (state_tx, state_rx) = mpsc::channel::<StateUpdate>();
 
+    // Keep a clone of cmd_tx for hardware audio capture thread
+    let cmd_tx_clone = cmd_tx.clone();
+
     // Web UI (background thread)
     thread::spawn(|| web::http::start("0.0.0.0:3000"));
 
     // WebSocket server (background thread)
     thread::spawn(move || web::websocket::start("0.0.0.0:8080", cmd_tx, state_rx));
+
+    // Hardware audio capture state
+    let mut hw_audio_active = false;
+    let mut hw_audio_stop: Option<Arc<AtomicBool>> = None;
+    let mut hw_audio_thread: Option<JoinHandle<()>> = None;
 
     // Main loop: owns the LED strip, runs animations
     let mut active_animation: Option<String> = None;
@@ -69,6 +102,10 @@ fn main() {
                 }
                 Command::ExtendedAudioData(analysis) => {
                     audio_bands = analysis.bands;
+                    // If hardware audio is active, stream analysis back to browser
+                    if hw_audio_active {
+                        let _ = state_tx.send(StateUpdate::HardwareAudioAnalysis(analysis.clone()));
+                    }
                     audio_analysis = analysis;
                 }
                 Command::SetCalibration(cal) => {
@@ -87,6 +124,133 @@ fn main() {
                 Command::GetCalibration => {
                     let json = calibration.to_json();
                     let _ = state_tx.send(StateUpdate::CalibrationData(json));
+                }
+                Command::ListAudioDevices => {
+                    let devices = hardware::audio::list_input_devices();
+                    let json_arr: Vec<String> = devices
+                        .iter()
+                        .map(|d| {
+                            format!(
+                                r#"{{"id":"{}","name":"{}"}}"#,
+                                d.id.replace('"', r#"\""#),
+                                d.name.replace('"', r#"\""#)
+                            )
+                        })
+                        .collect();
+                    let json = format!("[{}]", json_arr.join(","));
+                    let _ = state_tx.send(StateUpdate::AudioDeviceList(json));
+                }
+                Command::StartHardwareAudio { device_id } => {
+                    // Stop any existing hardware capture
+                    if let Some(stop_flag) = hw_audio_stop.take() {
+                        stop_flag.store(true, Ordering::Relaxed);
+                        if let Some(thread) = hw_audio_thread.take() {
+                            let _ = thread.join();
+                        }
+                    }
+
+                    let stop_flag = Arc::new(AtomicBool::new(false));
+                    hw_audio_stop = Some(stop_flag.clone());
+
+                    match hardware::audio::start_capture(&device_id, cmd_tx_clone.clone(), stop_flag) {
+                        Ok(handle) => {
+                            hw_audio_thread = Some(handle);
+                            hw_audio_active = true;
+                            let _ = state_tx.send(StateUpdate::HardwareAudioStatus("started".to_string()));
+                            println!("Hardware audio started on {}", device_id);
+                        }
+                        Err(e) => {
+                            hw_audio_active = false;
+                            let _ = state_tx.send(StateUpdate::HardwareAudioStatus(format!("error:{}", e)));
+                            println!("Hardware audio failed: {}", e);
+                        }
+                    }
+                }
+                Command::StopHardwareAudio => {
+                    if let Some(stop_flag) = hw_audio_stop.take() {
+                        stop_flag.store(true, Ordering::Relaxed);
+                        if let Some(thread) = hw_audio_thread.take() {
+                            let _ = thread.join();
+                        }
+                    }
+                    hw_audio_active = false;
+                    let _ = state_tx.send(StateUpdate::HardwareAudioStatus("stopped".to_string()));
+                    println!("Hardware audio stopped");
+                }
+                Command::BtScan => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        let _ = tx.send(StateUpdate::BtResult("scan:scanning".to_string()));
+                        let devices = hardware::bluetooth::scan(8);
+                        let json = hardware::bluetooth::devices_to_json(&devices);
+                        let _ = tx.send(StateUpdate::BtDeviceList(json));
+                        let _ = tx.send(StateUpdate::BtResult("scan:ok".to_string()));
+                    });
+                }
+                Command::BtList => {
+                    let devices = hardware::bluetooth::list_devices();
+                    let json = hardware::bluetooth::devices_to_json(&devices);
+                    let _ = state_tx.send(StateUpdate::BtDeviceList(json));
+                }
+                Command::BtPair { mac } => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        match hardware::bluetooth::pair(&mac) {
+                            Ok(()) => {
+                                let _ = tx.send(StateUpdate::BtResult(format!("pair:ok:{}", mac)));
+                            }
+                            Err(e) => {
+                                let _ = tx.send(StateUpdate::BtResult(format!("pair:error:{}:{}", mac, e)));
+                            }
+                        }
+                        refresh_bt_and_audio(&tx);
+                    });
+                }
+                Command::BtConnect { mac } => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        match hardware::bluetooth::connect(&mac) {
+                            Ok(()) => {
+                                let _ = tx.send(StateUpdate::BtResult(format!("connect:ok:{}", mac)));
+                            }
+                            Err(e) => {
+                                let _ = tx.send(StateUpdate::BtResult(format!("connect:error:{}:{}", mac, e)));
+                            }
+                        }
+                        // Small delay for PulseAudio/PipeWire to register the new source
+                        thread::sleep(Duration::from_secs(2));
+                        refresh_bt_and_audio(&tx);
+                    });
+                }
+                Command::BtDisconnect { mac } => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        match hardware::bluetooth::disconnect(&mac) {
+                            Ok(()) => {
+                                let _ = tx.send(StateUpdate::BtResult(format!("disconnect:ok:{}", mac)));
+                            }
+                            Err(e) => {
+                                let _ = tx.send(StateUpdate::BtResult(format!("disconnect:error:{}:{}", mac, e)));
+                            }
+                        }
+                        thread::sleep(Duration::from_millis(500));
+                        refresh_bt_and_audio(&tx);
+                    });
+                }
+                Command::BtRemove { mac } => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        match hardware::bluetooth::remove(&mac) {
+                            Ok(()) => {
+                                let _ = tx.send(StateUpdate::BtResult(format!("remove:ok:{}", mac)));
+                            }
+                            Err(e) => {
+                                let _ = tx.send(StateUpdate::BtResult(format!("remove:error:{}:{}", mac, e)));
+                            }
+                        }
+                        thread::sleep(Duration::from_millis(500));
+                        refresh_bt_and_audio(&tx);
+                    });
                 }
             }
         }

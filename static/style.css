@@ -198,6 +198,18 @@ body {
 .audio-btn:hover { border-color: #4a4a8a; color: #ccc; }
 .audio-btn.active { background: #132e28; border-color: #4ecdc4; color: #4ecdc4; }
 .audio-btn:disabled { opacity: 0.3; cursor: default; }
+.audio-select {
+    flex: 1;
+    min-width: 0;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #252545;
+    border-radius: 6px;
+    background: #0d0d1a;
+    color: #ccc;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.audio-select:disabled { opacity: 0.4; cursor: default; }
 
 /* Audio split layout */
 .audio-split {
@@ -454,6 +466,92 @@ body {
     border: 1px solid #3a3a22;
 }
 .cal-btn-test:hover { background: #3a3a22; }
+
+/* Bluetooth page */
+.bt-section { margin-bottom: 1.5rem; }
+.bt-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+.bt-status {
+    display: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    background: #1a1a30;
+    color: #aaa;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+.bt-device-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.bt-empty {
+    color: #555;
+    font-size: 0.85rem;
+    padding: 1rem;
+    text-align: center;
+}
+.bt-device {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    background: #111122;
+    border: 1px solid #1a1a35;
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+.bt-device-info { flex: 1; min-width: 120px; }
+.bt-device-name {
+    color: #ddd;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.bt-device-mac {
+    color: #666;
+    font-size: 0.75rem;
+    font-family: monospace;
+}
+.bt-device-status { flex-shrink: 0; }
+.bt-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.bt-badge-connected { background: #132e28; color: #4ecdc4; }
+.bt-badge-paired { background: #1a2a4a; color: #6a9fff; }
+.bt-badge-new { background: #2a2a1a; color: #cfcf6f; }
+.bt-device-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+.bt-action-btn {
+    padding: 0.3rem 0.7rem;
+    border-radius: 5px;
+    border: 1px solid #252545;
+    background: #0d0d1a;
+    color: #999;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.bt-action-btn:hover { border-color: #4a4a8a; color: #ccc; }
+.bt-action-connect { color: #4ecdc4; border-color: #2a4a45; }
+.bt-action-connect:hover { background: #132e28; }
+.bt-action-pair { color: #6a9fff; border-color: #2a3a5a; }
+.bt-action-pair:hover { background: #1a2a4a; }
+.bt-action-disconnect { color: #ff9966; border-color: #4a3322; }
+.bt-action-disconnect:hover { background: #2a1a10; }
+.bt-action-remove { color: #ff6666; border-color: #4a2222; }
+.bt-action-remove:hover { background: #2a1010; }
 
 /* LED Preview panel */
 .preview-panel {

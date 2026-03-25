@@ -34,6 +34,52 @@ pub fn start(
                         responder.send(Message::Text(msg.clone()));
                     }
                 }
+                StateUpdate::AudioDeviceList(json) => {
+                    let msg = format!("hw_audio:devices:{}", json);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
+                StateUpdate::HardwareAudioAnalysis(ref a) => {
+                    // Binary format: [0x04, bands[8], kick, snare, hihat,
+                    //   vocals, bassline, bpm_hi, bpm_lo, beat_phase,
+                    //   note_midi, chord_root, chord_quality] = 20 bytes
+                    let mut data = vec![0u8; 20];
+                    data[0] = 0x04;
+                    data[1..9].copy_from_slice(&a.bands);
+                    data[9] = a.kick;
+                    data[10] = a.snare;
+                    data[11] = a.hihat;
+                    data[12] = a.vocals;
+                    data[13] = a.bass_line;
+                    data[14] = (a.bpm >> 8) as u8;
+                    data[15] = (a.bpm & 0xFF) as u8;
+                    data[16] = a.beat_phase;
+                    data[17] = a.note_midi;
+                    data[18] = a.chord_root;
+                    data[19] = a.chord_quality;
+                    for responder in clients.values() {
+                        responder.send(Message::Binary(data.clone()));
+                    }
+                }
+                StateUpdate::HardwareAudioStatus(ref status) => {
+                    let msg = format!("hw_audio:status:{}", status);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
+                StateUpdate::BtDeviceList(ref json) => {
+                    let msg = format!("bt:devices:{}", json);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
+                StateUpdate::BtResult(ref result) => {
+                    let msg = format!("bt:result:{}", result);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
             }
         }
 
@@ -85,6 +131,26 @@ fn parse_command(text: &str) -> Option<Command> {
         Some(Command::SaveCalibration)
     } else if text == "get_calibration" {
         Some(Command::GetCalibration)
+    } else if text == "hw_audio:list" {
+        Some(Command::ListAudioDevices)
+    } else if let Some(device_id) = text.strip_prefix("hw_audio:start:") {
+        Some(Command::StartHardwareAudio {
+            device_id: device_id.trim().to_string(),
+        })
+    } else if text == "hw_audio:stop" {
+        Some(Command::StopHardwareAudio)
+    } else if text == "bt:scan" {
+        Some(Command::BtScan)
+    } else if text == "bt:list" {
+        Some(Command::BtList)
+    } else if let Some(mac) = text.strip_prefix("bt:pair:") {
+        Some(Command::BtPair { mac: mac.trim().to_string() })
+    } else if let Some(mac) = text.strip_prefix("bt:connect:") {
+        Some(Command::BtConnect { mac: mac.trim().to_string() })
+    } else if let Some(mac) = text.strip_prefix("bt:disconnect:") {
+        Some(Command::BtDisconnect { mac: mac.trim().to_string() })
+    } else if let Some(mac) = text.strip_prefix("bt:remove:") {
+        Some(Command::BtRemove { mac: mac.trim().to_string() })
     } else {
         None
     }

@@ -40,6 +40,15 @@ pub enum Command {
     SetCalibration(Calibration),
     SaveCalibration,
     GetCalibration,
+    ListAudioDevices,
+    StartHardwareAudio { device_id: String },
+    StopHardwareAudio,
+    BtScan,
+    BtList,
+    BtPair { mac: String },
+    BtConnect { mac: String },
+    BtDisconnect { mac: String },
+    BtRemove { mac: String },
 }
 
 /// State updates sent from the main loop to WebSocket clients.
@@ -49,4 +58,14 @@ pub enum StateUpdate {
     LedState(Vec<u8>),
     /// Calibration data as JSON string
     CalibrationData(String),
+    /// JSON array of available hardware audio input devices
+    AudioDeviceList(String),
+    /// Hardware audio analysis data to stream back to browser for visualization
+    HardwareAudioAnalysis(AudioAnalysis),
+    /// Hardware audio status: "started", "stopped", "error:..."
+    HardwareAudioStatus(String),
+    /// Bluetooth device list as JSON
+    BtDeviceList(String),
+    /// Bluetooth operation result: "bt:result:<action>:<ok|error:msg>"
+    BtResult(String),
 }

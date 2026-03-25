@@ -6,7 +6,11 @@ function connect() {
     const host = window.location.hostname;
     ws = new WebSocket(`ws://${host}:8080`);
     ws.binaryType = 'arraybuffer';
-    ws.onopen = () => { statusEl.textContent = 'Online'; statusEl.className = 'connected'; };
+    ws.onopen = () => {
+        statusEl.textContent = 'Online'; statusEl.className = 'connected';
+        // Request hardware audio device list
+        ws.send('hw_audio:list');
+    };
     ws.onclose = () => {
         statusEl.textContent = 'Offline'; statusEl.className = 'disconnected';
         setActiveAnim(null);

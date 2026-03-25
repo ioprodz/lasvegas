@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-PI_HOST="192.168.1.80"
+PI_HOST="192.168.1.97"
 PI_USER="freeu"
 PI_PASS="freepass"
 TARGET="aarch64-unknown-linux-musl"
