@@ -15,7 +15,7 @@ pub fn start(
     let event_hub = simple_websockets::launch_from_listener(listener)
         .expect(&format!("failed to listen on {}", addr));
 
-    println!("WebSocket server listening on {}", addr);
+    println!("WebSocket server listening on {}", super::display_addr(addr));
 
     let mut clients: HashMap<u64, Responder> = HashMap::new();
 

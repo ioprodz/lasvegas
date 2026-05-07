@@ -28,7 +28,7 @@ fn serve(stream: &mut std::net::TcpStream, content_type: &str, body: &str) {
 
 pub fn start(addr: &str) {
     let listener = TcpListener::bind(addr).unwrap();
-    println!("Web UI available at http://{}", addr);
+    println!("Web UI available at http://{}", super::display_addr(addr));
     for stream in listener.incoming() {
         if let Ok(mut stream) = stream {
             let mut request_line = String::new();
