@@ -46,6 +46,9 @@
                 <button class="nav-item" data-page="bluetooth">
                     <span class="icon">&#127247;</span> Bluetooth
                 </button>
+                <button class="nav-item" data-page="network">
+                    <span class="icon">&#128246;</span> Network
+                </button>
                 <button class="nav-item" data-page="calibrate" id="nav-calibrate">
                     <span class="icon">&#9881;</span> Calibrate
                 </button>
@@ -293,6 +296,128 @@
                     </div>
                 </div>
 
+                <!-- Network page -->
+                <div id="page-network" class="page">
+                    <div class="content-header">
+                        <h2>Network</h2>
+                    </div>
+
+                    <div id="net-stage-banner" class="net-stage-banner" style="display:none;"></div>
+                    <div id="net-status-msg" class="bt-status"></div>
+
+                    <div class="bt-section">
+                        <div class="section-label">Interfaces</div>
+                        <div class="bt-actions">
+                            <button class="cal-btn cal-btn-reset" id="net-refresh-btn">Refresh</button>
+                        </div>
+                        <div id="net-iface-list" class="bt-device-list">
+                            <div class="bt-empty">Loading...</div>
+                        </div>
+                    </div>
+
+                    <div class="bt-section">
+                        <div class="section-label">Access Point (TP-Link USB)</div>
+                        <div id="net-ap-iface-status" style="font-size:0.85rem;margin-bottom:0.5rem;"></div>
+                        <div class="net-form">
+                            <label>SSID
+                                <input type="text" id="net-ap-ssid" placeholder="lasvegas">
+                            </label>
+                            <label>Password (min 8 chars)
+                                <input type="text" id="net-ap-password" placeholder="...">
+                            </label>
+                            <label>Band
+                                <select id="net-ap-band">
+                                    <option value="bg">2.4 GHz (b/g/n)</option>
+                                    <option value="a">5 GHz (a/n/ac)</option>
+                                </select>
+                            </label>
+                            <label>Channel (0 = auto)
+                                <input type="number" id="net-ap-channel" min="0" max="165" value="0">
+                            </label>
+                            <label class="net-form-row-toggle">
+                                <input type="checkbox" id="net-ap-enabled" checked>
+                                Enable AP (auto-on when adapter present)
+                            </label>
+                        </div>
+                        <div class="bt-actions">
+                            <button class="cal-btn cal-btn-save" id="net-ap-save-btn">Save AP Config</button>
+                        </div>
+                        <div class="section-label" style="margin-top:0.75rem;">Connected Clients</div>
+                        <div id="net-ap-clients" class="bt-device-list">
+                            <div class="bt-empty">No clients connected to AP.</div>
+                        </div>
+                    </div>
+
+                    <div class="bt-section">
+                        <div class="section-label">Wi-Fi Networks (onboard wlan0)</div>
+                        <div class="bt-actions">
+                            <button class="cal-btn cal-btn-save" id="net-scan-btn">Scan</button>
+                        </div>
+                        <div id="net-scan-list" class="bt-device-list" style="margin-bottom:0.75rem;">
+                            <div class="bt-empty">No scan results yet. Click "Scan".</div>
+                        </div>
+                        <div class="section-label">Saved Networks</div>
+                        <div id="net-known-wifi-list" class="bt-device-list" style="margin-bottom:0.75rem;">
+                            <div class="bt-empty">No saved networks.</div>
+                        </div>
+                        <div class="section-label">Add / Edit Saved Network</div>
+                        <div class="net-form">
+                            <label>SSID
+                                <input type="text" id="net-new-wifi-ssid">
+                            </label>
+                            <label>Password (blank for open)
+                                <input type="password" id="net-new-wifi-password">
+                            </label>
+                            <label>Priority (higher = preferred)
+                                <input type="number" id="net-new-wifi-priority" value="0">
+                            </label>
+                            <label class="net-form-row-toggle">
+                                <input type="checkbox" id="net-new-wifi-hidden">
+                                Hidden network
+                            </label>
+                        </div>
+                        <div class="bt-actions">
+                            <button class="cal-btn cal-btn-save" id="net-add-wifi-btn">Save Network</button>
+                        </div>
+                    </div>
+
+                    <div class="bt-section">
+                        <div class="section-label">Ethernet (eth0)</div>
+                        <div style="font-size:0.8rem;color:#cfcf6f;margin-bottom:0.5rem;">⚠ Changes here are staged with a 30s auto-revert.</div>
+                        <div class="net-form">
+                            <label class="net-form-row-toggle">
+                                <input type="radio" name="net-eth-mode" id="net-eth-mode-dhcp" value="dhcp" checked>
+                                DHCP (recommended)
+                            </label>
+                            <label class="net-form-row-toggle">
+                                <input type="radio" name="net-eth-mode" id="net-eth-mode-static" value="static">
+                                Static
+                            </label>
+                            <div id="net-eth-static-fields" style="display:none;">
+                                <label>IP address
+                                    <input type="text" id="net-eth-ip" placeholder="192.168.1.97">
+                                </label>
+                                <label>Prefix length
+                                    <input type="number" id="net-eth-prefix" min="1" max="32" value="24">
+                                </label>
+                                <label>Gateway
+                                    <input type="text" id="net-eth-gateway" placeholder="192.168.1.1">
+                                </label>
+                                <label>DNS (space-separated)
+                                    <input type="text" id="net-eth-dns" placeholder="1.1.1.1 8.8.8.8">
+                                </label>
+                            </div>
+                            <label class="net-form-row-toggle">
+                                <input type="checkbox" id="net-eth-enabled" checked>
+                                Enable (autoconnect)
+                            </label>
+                        </div>
+                        <div class="bt-actions">
+                            <button class="cal-btn cal-btn-save" id="net-eth-save-btn">Apply Ethernet</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Bluetooth page -->
                 <div id="page-bluetooth" class="page">
                     <div class="content-header">
@@ -335,6 +460,7 @@
     <script src="/js/audio-capture.js"></script>
     <script src="/js/calibration.js"></script>
     <script src="/js/bluetooth.js"></script>
+    <script src="/js/network.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html>

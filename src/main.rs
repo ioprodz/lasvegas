@@ -51,10 +51,19 @@ fn main() {
     let cmd_tx_clone = cmd_tx.clone();
 
     // Web UI (background thread)
-    thread::spawn(|| web::http::start("0.0.0.0:3000"));
+    thread::spawn(|| web::http::start("0.0.0.0:80"));
 
     // WebSocket server (background thread)
     thread::spawn(move || web::websocket::start("0.0.0.0:8080", cmd_tx, state_rx));
+
+    // Periodic network status broadcaster (so UI sees IP/signal/client changes).
+    {
+        let tx = state_tx.clone();
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(5));
+            let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+        });
+    }
 
     // Hardware audio capture state
     let mut hw_audio_active = false;
@@ -250,6 +259,117 @@ fn main() {
                         }
                         thread::sleep(Duration::from_millis(500));
                         refresh_bt_and_audio(&tx);
+                    });
+                }
+                Command::NetList => {
+                    let _ = state_tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+                }
+                Command::NetWifiScan => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        let aps = hardware::network::wifi_scan();
+                        let json: Vec<String> = aps.iter().map(|a| format!(
+                            r#"{{"ssid":"{}","signal":{},"security":"{}","in_use":{}}}"#,
+                            a.ssid.replace('\\', "\\\\").replace('"', "\\\""),
+                            a.signal,
+                            a.security.replace('"', "\\\""),
+                            a.in_use,
+                        )).collect();
+                        let _ = tx.send(StateUpdate::NetResult(format!("wifi:scan:[{}]", json.join(","))));
+                    });
+                }
+                Command::NetWifiUpsert(w) => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        let ssid = w.ssid.clone();
+                        match hardware::network::known_wifi_upsert(w) {
+                            Ok(()) => { let _ = tx.send(StateUpdate::NetResult(format!("wifi:upsert:ok:{}", ssid))); }
+                            Err(e) => { let _ = tx.send(StateUpdate::NetResult(format!("wifi:upsert:error:{}:{}", ssid, e))); }
+                        }
+                        let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+                    });
+                }
+                Command::NetWifiRemove { ssid } => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        let s = ssid.clone();
+                        match hardware::network::known_wifi_remove(&ssid) {
+                            Ok(()) => { let _ = tx.send(StateUpdate::NetResult(format!("wifi:remove:ok:{}", s))); }
+                            Err(e) => { let _ = tx.send(StateUpdate::NetResult(format!("wifi:remove:error:{}:{}", s, e))); }
+                        }
+                        let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+                    });
+                }
+                Command::NetWifiConnect { ssid } => {
+                    // Wi-Fi client switch is risky — stage it.
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        let profile = format!("lv-client-{}", ssid.chars().map(|c| {
+                            if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' }
+                        }).collect::<String>());
+                        let ssid_owned = ssid.clone();
+                        let res = hardware::network::stage_change(&profile, move || {
+                            hardware::network::wifi_connect_now(&ssid_owned)
+                        });
+                        match res {
+                            Ok(token) => {
+                                let _ = tx.send(StateUpdate::NetResult(format!("stage:pending:{}:30", token)));
+                            }
+                            Err(e) => {
+                                let _ = tx.send(StateUpdate::NetResult(format!("wifi:connect:error:{}:{}", ssid, e)));
+                            }
+                        }
+                        let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+                    });
+                }
+                Command::NetApSet(cfg) => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        match hardware::network::ap_set(cfg) {
+                            Ok(()) => { let _ = tx.send(StateUpdate::NetResult("ap:set:ok".to_string())); }
+                            Err(e) => { let _ = tx.send(StateUpdate::NetResult(format!("ap:set:error:{}", e))); }
+                        }
+                        let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+                    });
+                }
+                Command::NetApToggle { enabled } => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        match hardware::network::ap_toggle(enabled) {
+                            Ok(()) => { let _ = tx.send(StateUpdate::NetResult(format!("ap:toggle:ok:{}", enabled))); }
+                            Err(e) => { let _ = tx.send(StateUpdate::NetResult(format!("ap:toggle:error:{}", e))); }
+                        }
+                        let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+                    });
+                }
+                Command::NetEthSet(cfg) => {
+                    // eth0 changes always staged.
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        let res = hardware::network::stage_change("lv-eth0", move || {
+                            hardware::network::eth_set(cfg)
+                        });
+                        match res {
+                            Ok(token) => { let _ = tx.send(StateUpdate::NetResult(format!("stage:pending:{}:30", token))); }
+                            Err(e) => { let _ = tx.send(StateUpdate::NetResult(format!("eth:set:error:{}", e))); }
+                        }
+                        let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+                    });
+                }
+                Command::NetStageConfirm { token } => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        let ok = hardware::network::confirm_stage(token);
+                        let _ = tx.send(StateUpdate::NetResult(format!("stage:confirm:{}:{}", token, if ok { "ok" } else { "unknown" })));
+                        let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
+                    });
+                }
+                Command::NetStageRevert { token } => {
+                    let tx = state_tx.clone();
+                    thread::spawn(move || {
+                        let ok = hardware::network::revert_stage(token);
+                        let _ = tx.send(StateUpdate::NetResult(format!("stage:revert:{}:{}", token, if ok { "ok" } else { "unknown" })));
+                        let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
                     });
                 }
             }

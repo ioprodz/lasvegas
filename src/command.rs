@@ -1,4 +1,5 @@
 use crate::hardware::calibration::Calibration;
+use crate::hardware::network::{ApConfig, EthConfig, KnownWifi};
 
 /// Extended audio analysis sent from the browser.
 #[derive(Debug, Clone)]
@@ -49,6 +50,16 @@ pub enum Command {
     BtConnect { mac: String },
     BtDisconnect { mac: String },
     BtRemove { mac: String },
+    NetList,
+    NetWifiScan,
+    NetWifiUpsert(KnownWifi),
+    NetWifiRemove { ssid: String },
+    NetWifiConnect { ssid: String },
+    NetApSet(ApConfig),
+    NetApToggle { enabled: bool },
+    NetEthSet(EthConfig),
+    NetStageConfirm { token: u32 },
+    NetStageRevert { token: u32 },
 }
 
 /// State updates sent from the main loop to WebSocket clients.
@@ -68,4 +79,8 @@ pub enum StateUpdate {
     BtDeviceList(String),
     /// Bluetooth operation result: "bt:result:<action>:<ok|error:msg>"
     BtResult(String),
+    /// Network status snapshot as JSON
+    NetStatus(String),
+    /// Network operation result, e.g. "ap:set:ok", "wifi:scan:[json]", "stage:pending:<token>:<secs>"
+    NetResult(String),
 }

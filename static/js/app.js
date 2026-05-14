@@ -27,6 +27,10 @@ function handleWsMessage(event) {
             handleBtDeviceList(event.data.slice('bt:devices:'.length));
         } else if (event.data.startsWith('bt:result:')) {
             handleBtResult(event.data.slice('bt:result:'.length));
+        } else if (event.data.startsWith('net:status:')) {
+            handleNetStatus(event.data.slice('net:status:'.length));
+        } else if (event.data.startsWith('net:result:')) {
+            handleNetResult(event.data.slice('net:result:'.length));
         }
     }
 }

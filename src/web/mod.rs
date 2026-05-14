@@ -23,9 +23,14 @@ pub fn lan_ip() -> IpAddr {
 }
 
 /// Render a bind address using the LAN IP when bound to `0.0.0.0`.
+/// Port 80 (HTTP) is omitted since it's the default.
 pub fn display_addr(addr: &str) -> String {
     if let Some(port) = addr.strip_prefix("0.0.0.0:") {
-        format!("{}:{}", lan_ip(), port)
+        if port == "80" {
+            lan_ip().to_string()
+        } else {
+            format!("{}:{}", lan_ip(), port)
+        }
     } else {
         addr.to_string()
     }

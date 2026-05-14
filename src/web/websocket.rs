@@ -5,6 +5,7 @@ use std::sync::mpsc;
 
 use crate::command::{AudioAnalysis, Command, StateUpdate};
 use crate::hardware::calibration::Calibration;
+use crate::hardware::network;
 
 pub fn start(
     addr: &str,
@@ -80,6 +81,18 @@ pub fn start(
                         responder.send(Message::Text(msg.clone()));
                     }
                 }
+                StateUpdate::NetStatus(ref json) => {
+                    let msg = format!("net:status:{}", json);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
+                StateUpdate::NetResult(ref result) => {
+                    let msg = format!("net:result:{}", result);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
             }
         }
 
@@ -91,6 +104,8 @@ pub fn start(
                     clients.insert(client_id, responder);
                     // Send current calibration to new client
                     let _ = cmd_tx.send(Command::GetCalibration);
+                    // Send a fresh network snapshot
+                    let _ = cmd_tx.send(Command::NetList);
                 }
                 Event::Disconnect(client_id) => {
                     println!("Client #{} disconnected", client_id);
@@ -151,6 +166,26 @@ fn parse_command(text: &str) -> Option<Command> {
         Some(Command::BtDisconnect { mac: mac.trim().to_string() })
     } else if let Some(mac) = text.strip_prefix("bt:remove:") {
         Some(Command::BtRemove { mac: mac.trim().to_string() })
+    } else if text == "net:list" {
+        Some(Command::NetList)
+    } else if text == "net:wifi:scan" {
+        Some(Command::NetWifiScan)
+    } else if let Some(json) = text.strip_prefix("net:wifi:upsert:") {
+        network::known_wifi_from_json(json).map(Command::NetWifiUpsert)
+    } else if let Some(ssid) = text.strip_prefix("net:wifi:remove:") {
+        Some(Command::NetWifiRemove { ssid: ssid.trim().to_string() })
+    } else if let Some(ssid) = text.strip_prefix("net:wifi:connect:") {
+        Some(Command::NetWifiConnect { ssid: ssid.trim().to_string() })
+    } else if let Some(json) = text.strip_prefix("net:ap:set:") {
+        network::ap_config_from_json(json).map(Command::NetApSet)
+    } else if let Some(flag) = text.strip_prefix("net:ap:toggle:") {
+        Some(Command::NetApToggle { enabled: flag.trim() == "1" })
+    } else if let Some(json) = text.strip_prefix("net:eth:set:") {
+        network::eth_config_from_json(json).map(Command::NetEthSet)
+    } else if let Some(t) = text.strip_prefix("net:stage:confirm:") {
+        t.trim().parse().ok().map(|token| Command::NetStageConfirm { token })
+    } else if let Some(t) = text.strip_prefix("net:stage:revert:") {
+        t.trim().parse().ok().map(|token| Command::NetStageRevert { token })
     } else {
         None
     }

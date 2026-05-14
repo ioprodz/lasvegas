@@ -10,6 +10,7 @@ const PAGE_PATHS = {
     animations: '/animations',
     audio: '/audio',
     bluetooth: '/bluetooth',
+    network: '/network',
     calibrate: '/calibrate',
 };
 
@@ -62,6 +63,9 @@ function routeFromPath() {
     } else if (path === '/bluetooth') {
         showPage('bluetooth');
         if (ws && ws.readyState === WebSocket.OPEN) ws.send('bt:list');
+    } else if (path === '/network') {
+        showPage('network');
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send('net:list');
     } else if (path === '/calibrate') {
         showPage('calibrate');
         if (ws && ws.readyState === WebSocket.OPEN) ws.send('get_calibration');

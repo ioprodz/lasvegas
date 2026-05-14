@@ -13,6 +13,7 @@ const JS_CHROMATIC_CIRCLE: &str = include_str!("../../static/js/chromatic-circle
 const JS_AUDIO_CAPTURE: &str = include_str!("../../static/js/audio-capture.js");
 const JS_CALIBRATION: &str = include_str!("../../static/js/calibration.js");
 const JS_BLUETOOTH: &str = include_str!("../../static/js/bluetooth.js");
+const JS_NETWORK: &str = include_str!("../../static/js/network.js");
 const JS_APP: &str = include_str!("../../static/js/app.js");
 
 fn serve(stream: &mut std::net::TcpStream, content_type: &str, body: &str) {
@@ -72,6 +73,9 @@ pub fn start(addr: &str) {
                 }
                 "/js/bluetooth.js" => {
                     serve(&mut stream, "application/javascript", JS_BLUETOOTH)
+                }
+                "/js/network.js" => {
+                    serve(&mut stream, "application/javascript", JS_NETWORK)
                 }
                 "/js/app.js" => serve(&mut stream, "application/javascript", JS_APP),
                 // SPA fallback: all other paths get index.html

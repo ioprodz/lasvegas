@@ -553,6 +553,58 @@ body {
 .bt-action-remove { color: #ff6666; border-color: #4a2222; }
 .bt-action-remove:hover { background: #2a1010; }
 
+/* Network page */
+.net-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+.net-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: #888;
+}
+.net-form label.net-form-row-toggle {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    color: #bbb;
+    font-size: 0.85rem;
+}
+.net-form input[type="text"],
+.net-form input[type="password"],
+.net-form input[type="number"],
+.net-form select {
+    background: #0d0d1a;
+    border: 1px solid #252545;
+    color: #ddd;
+    padding: 0.4rem 0.6rem;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    font-family: inherit;
+}
+.net-form input:focus, .net-form select:focus {
+    outline: none;
+    border-color: #4a4a8a;
+}
+.net-stage-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    background: #2a1a10;
+    border: 1px solid #4a3322;
+    border-radius: 8px;
+    color: #ff9966;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
 /* LED Preview panel */
 .preview-panel {
     background: #0a0a14;
