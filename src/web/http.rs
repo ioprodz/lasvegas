@@ -3,8 +3,13 @@ use std::net::TcpListener;
 
 const INDEX_HTML: &str = include_str!("../../static/index.html");
 const STYLE_CSS: &str = include_str!("../../static/style.css");
+const CSS_TOKENS: &str = include_str!("../../static/css/tokens.css");
+const CSS_LAYOUT: &str = include_str!("../../static/css/layout.css");
+const CSS_COMPONENTS: &str = include_str!("../../static/css/components.css");
+const CSS_PAGES: &str = include_str!("../../static/css/pages.css");
 const JS_WEBSOCKET: &str = include_str!("../../static/js/websocket.js");
 const JS_LED_PREVIEW: &str = include_str!("../../static/js/led-preview.js");
+const JS_TOPBAR: &str = include_str!("../../static/js/topbar.js");
 const JS_NAVIGATION: &str = include_str!("../../static/js/navigation.js");
 const JS_ANIMATION: &str = include_str!("../../static/js/animation.js");
 const JS_AUDIO_ANALYSIS: &str = include_str!("../../static/js/audio-analysis.js");
@@ -14,6 +19,9 @@ const JS_AUDIO_CAPTURE: &str = include_str!("../../static/js/audio-capture.js");
 const JS_CALIBRATION: &str = include_str!("../../static/js/calibration.js");
 const JS_BLUETOOTH: &str = include_str!("../../static/js/bluetooth.js");
 const JS_NETWORK: &str = include_str!("../../static/js/network.js");
+const JS_KEYBOARD: &str = include_str!("../../static/js/keyboard.js");
+const JS_CHEATSHEET: &str = include_str!("../../static/js/cheatsheet.js");
+const JS_SHORTCUTS: &str = include_str!("../../static/js/shortcuts.js");
 const JS_APP: &str = include_str!("../../static/js/app.js");
 
 fn serve(stream: &mut std::net::TcpStream, content_type: &str, body: &str) {
@@ -52,10 +60,15 @@ pub fn start(addr: &str) {
 
             match path {
                 "/style.css" => serve(&mut stream, "text/css", STYLE_CSS),
+                "/css/tokens.css" => serve(&mut stream, "text/css", CSS_TOKENS),
+                "/css/layout.css" => serve(&mut stream, "text/css", CSS_LAYOUT),
+                "/css/components.css" => serve(&mut stream, "text/css", CSS_COMPONENTS),
+                "/css/pages.css" => serve(&mut stream, "text/css", CSS_PAGES),
                 "/js/websocket.js" => serve(&mut stream, "application/javascript", JS_WEBSOCKET),
                 "/js/led-preview.js" => {
                     serve(&mut stream, "application/javascript", JS_LED_PREVIEW)
                 }
+                "/js/topbar.js" => serve(&mut stream, "application/javascript", JS_TOPBAR),
                 "/js/navigation.js" => serve(&mut stream, "application/javascript", JS_NAVIGATION),
                 "/js/animation.js" => serve(&mut stream, "application/javascript", JS_ANIMATION),
                 "/js/audio-analysis.js" => {
@@ -71,11 +84,14 @@ pub fn start(addr: &str) {
                 "/js/calibration.js" => {
                     serve(&mut stream, "application/javascript", JS_CALIBRATION)
                 }
-                "/js/bluetooth.js" => {
-                    serve(&mut stream, "application/javascript", JS_BLUETOOTH)
+                "/js/bluetooth.js" => serve(&mut stream, "application/javascript", JS_BLUETOOTH),
+                "/js/network.js" => serve(&mut stream, "application/javascript", JS_NETWORK),
+                "/js/keyboard.js" => serve(&mut stream, "application/javascript", JS_KEYBOARD),
+                "/js/cheatsheet.js" => {
+                    serve(&mut stream, "application/javascript", JS_CHEATSHEET)
                 }
-                "/js/network.js" => {
-                    serve(&mut stream, "application/javascript", JS_NETWORK)
+                "/js/shortcuts.js" => {
+                    serve(&mut stream, "application/javascript", JS_SHORTCUTS)
                 }
                 "/js/app.js" => serve(&mut stream, "application/javascript", JS_APP),
                 // SPA fallback: all other paths get index.html

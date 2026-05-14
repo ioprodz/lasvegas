@@ -5,44 +5,68 @@ const sidebarOverlay = document.getElementById('sidebar-overlay');
 const navItems = document.querySelectorAll('.nav-item');
 const pages = document.querySelectorAll('.page');
 
-// Map of page names to URL paths
+// Map of page names to URL paths.
 const PAGE_PATHS = {
-    animations: '/animations',
-    audio: '/audio',
-    bluetooth: '/bluetooth',
-    network: '/network',
+    performance: '/',
     calibrate: '/calibrate',
+    network: '/network',
+    bluetooth: '/bluetooth',
 };
 
-sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
-sidebarOverlay.addEventListener('click', () => sidebar.classList.remove('open'));
+// Legacy paths from the previous URL scheme — redirect to /.
+const LEGACY_REDIRECTS = {
+    '/animations': 'performance',
+    '/audio': 'performance',
+};
+
+function closeSidebar() {
+    sidebar.classList.remove('open');
+    sidebarOverlay.classList.remove('open');
+}
+function openSidebar() {
+    sidebar.classList.add('open');
+    sidebarOverlay.classList.add('open');
+}
+sidebarToggle.addEventListener('click', () => {
+    if (sidebar.classList.contains('open')) closeSidebar();
+    else openSidebar();
+});
+sidebarOverlay.addEventListener('click', closeSidebar);
+
+let currentPage = 'performance';
 
 function showPage(pageName) {
     pages.forEach(p => p.classList.remove('active'));
     const el = document.getElementById('page-' + pageName);
     if (el) el.classList.add('active');
+    navItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.page === pageName);
+    });
+    currentPage = pageName;
+    document.body.dataset.page = pageName;
+
+    // Page-load hooks
+    if (pageName === 'bluetooth' && typeof ws !== 'undefined' && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send('bt:list');
+    } else if (pageName === 'network' && typeof ws !== 'undefined' && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send('net:list');
+    } else if (pageName === 'calibrate' && typeof ws !== 'undefined' && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send('get_calibration');
+    } else if (pageName === 'performance' && typeof ws !== 'undefined' && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send('hw_audio:list');
+    }
 }
 
 navItems.forEach(item => {
     item.addEventListener('click', () => {
         const page = item.dataset.page;
-        const anim = item.dataset.anim;
-
+        if (!page) return;
         showPage(page);
-
-        // Update URL
         const path = PAGE_PATHS[page] || '/';
         if (window.location.pathname !== path) {
-            history.pushState({ page, anim }, '', path);
+            history.pushState({ page }, '', path);
         }
-
-        // Start animation (only if nav item specifies one)
-        if (anim && ws && ws.readyState === WebSocket.OPEN) {
-            ws.send('animate:' + anim);
-            setActiveAnim(anim);
-        }
-
-        sidebar.classList.remove('open');
+        closeSidebar();
     });
 });
 
@@ -58,18 +82,12 @@ window.addEventListener('popstate', (e) => {
 // Route based on current URL path on page load
 function routeFromPath() {
     const path = window.location.pathname;
-    if (path === '/audio') {
-        showPage('audio');
-    } else if (path === '/bluetooth') {
-        showPage('bluetooth');
-        if (ws && ws.readyState === WebSocket.OPEN) ws.send('bt:list');
-    } else if (path === '/network') {
-        showPage('network');
-        if (ws && ws.readyState === WebSocket.OPEN) ws.send('net:list');
-    } else if (path === '/calibrate') {
-        showPage('calibrate');
-        if (ws && ws.readyState === WebSocket.OPEN) ws.send('get_calibration');
-    } else {
-        showPage('animations');
+    if (LEGACY_REDIRECTS[path]) {
+        history.replaceState({ page: LEGACY_REDIRECTS[path] }, '', PAGE_PATHS[LEGACY_REDIRECTS[path]]);
+        showPage(LEGACY_REDIRECTS[path]);
+        return;
     }
+    const found = Object.entries(PAGE_PATHS).find(([, p]) => p === path);
+    if (found) showPage(found[0]);
+    else showPage('performance');
 }

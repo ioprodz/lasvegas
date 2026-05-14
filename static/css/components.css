@@ -1,0 +1,350 @@
+/* Hardware component library — class-based. */
+
+/* ---------- Section label (uppercase wide-tracked) ---------- */
+.hw-label {
+    color: var(--label);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-bottom: 0.4rem;
+    display: block;
+}
+
+/* ---------- Panel ---------- */
+.hw-panel {
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0.7rem 0.9rem;
+    box-shadow: var(--shadow-panel);
+}
+.hw-panel + .hw-panel { margin-top: 1rem; }
+.hw-panel-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Recessed screen (LCD-style data display) */
+.hw-screen {
+    background: var(--bg-screen);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+    padding: 0.7rem 0.85rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--neon-cyan);
+    line-height: 1.6;
+}
+
+/* ---------- Buttons ---------- */
+.hw-button {
+    --tone: var(--text-muted);
+    --tone-bg: var(--bg-2);
+    --tone-border: var(--border);
+    --tone-glow: transparent;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: var(--tap);
+    padding: 0.55rem 1rem;
+    background: linear-gradient(180deg, var(--tone-bg), color-mix(in srgb, var(--tone-bg) 70%, #000));
+    color: var(--tone);
+    border: 1px solid var(--tone-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: transform 80ms ease, box-shadow 120ms ease, border-color 120ms ease, color 120ms ease;
+    box-shadow: var(--shadow-inset);
+    touch-action: manipulation;
+    user-select: none;
+}
+.hw-button:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--tone);
+}
+.hw-button:active:not(:disabled) { transform: translateY(1px); }
+.hw-button:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-inset), 0 0 0 2px var(--tone-glow), 0 0 10px var(--tone-glow);
+}
+.hw-button:disabled { opacity: 0.35; cursor: default; }
+
+.hw-button.active {
+    color: var(--tone);
+    border-color: var(--tone);
+    box-shadow: var(--shadow-inset), 0 0 12px var(--tone-glow);
+}
+
+/* Tones */
+.hw-button.tone-primary { --tone: var(--neon-magenta); --tone-glow: var(--neon-magenta-glow); --tone-border: color-mix(in srgb, var(--neon-magenta) 30%, var(--border)); }
+.hw-button.tone-go      { --tone: var(--neon-green);   --tone-glow: var(--neon-green-glow);   --tone-border: color-mix(in srgb, var(--neon-green) 30%, var(--border)); }
+.hw-button.tone-stop    { --tone: var(--neon-red);     --tone-glow: var(--neon-red-glow);     --tone-border: color-mix(in srgb, var(--neon-red) 30%, var(--border)); }
+.hw-button.tone-queue   { --tone: var(--neon-cyan);    --tone-glow: var(--neon-cyan-glow);    --tone-border: color-mix(in srgb, var(--neon-cyan) 30%, var(--border)); }
+.hw-button.tone-warn    { --tone: var(--neon-amber);   --tone-glow: var(--neon-amber-glow);   --tone-border: color-mix(in srgb, var(--neon-amber) 30%, var(--border)); }
+.hw-button.tone-ghost   { --tone-bg: transparent; }
+
+.hw-button.round {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 50%;
+}
+.hw-button.sm {
+    min-height: 32px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
+}
+.hw-button.lg {
+    min-height: 52px;
+    padding: 0.7rem 1.3rem;
+    font-size: 0.95rem;
+}
+
+/* Keyboard hint badge on a button */
+.kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+}
+.hw-button .kbd {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 10px;
+    min-width: 16px;
+    height: 16px;
+}
+body.no-kbd .kbd { display: none; }
+
+/* ---------- Segmented control ---------- */
+.hw-segmented {
+    display: inline-flex;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3px;
+    gap: 3px;
+}
+.hw-segmented button {
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    padding: 0.45rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: background 120ms ease, color 120ms ease;
+    min-height: 36px;
+    touch-action: manipulation;
+}
+.hw-segmented button:hover { color: var(--text); }
+.hw-segmented button.active {
+    background: var(--bg-3);
+    color: var(--neon-magenta);
+    box-shadow: var(--shadow-inset), 0 0 8px var(--neon-magenta-glow);
+}
+
+/* ---------- LED indicator ---------- */
+.hw-led {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    box-shadow: inset 0 0 2px rgba(0,0,0,0.6);
+    flex-shrink: 0;
+}
+.hw-led.on       { background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green-glow); }
+.hw-led.cyan.on  { background: var(--neon-cyan);  box-shadow: 0 0 8px var(--neon-cyan-glow); }
+.hw-led.magenta.on{ background: var(--neon-magenta); box-shadow: 0 0 8px var(--neon-magenta-glow); }
+.hw-led.amber.on { background: var(--neon-amber); box-shadow: 0 0 8px var(--neon-amber-glow); }
+.hw-led.red.on   { background: var(--neon-red);   box-shadow: 0 0 8px var(--neon-red-glow); }
+
+/* ---------- Chip (status pill in top bar) ---------- */
+.hw-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.7rem;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.hw-chip.running {
+    color: var(--neon-magenta);
+    border-color: color-mix(in srgb, var(--neon-magenta) 40%, var(--border));
+    box-shadow: 0 0 8px var(--neon-magenta-glow);
+}
+
+/* ---------- Slider (styled native range) ---------- */
+.hw-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 28px;
+    background: transparent;
+    cursor: pointer;
+}
+.hw-slider:focus { outline: none; }
+.hw-slider::-webkit-slider-runnable-track {
+    height: 6px;
+    background: var(--bg-screen);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.6);
+}
+.hw-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #444, #1a1a2a);
+    border: 1px solid var(--border-strong);
+    margin-top: -7px;
+    box-shadow: 0 0 8px var(--neon-cyan-glow);
+    cursor: pointer;
+}
+.hw-slider::-moz-range-track {
+    height: 6px;
+    background: var(--bg-screen);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+}
+.hw-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #444, #1a1a2a);
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 0 8px var(--neon-cyan-glow);
+    cursor: pointer;
+}
+
+/* ---------- Inputs ---------- */
+.hw-input,
+.hw-select {
+    width: 100%;
+    background: var(--bg-screen);
+    border: 1px solid var(--border-soft);
+    color: var(--text);
+    padding: 0.5rem 0.65rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    min-height: var(--tap);
+}
+.hw-input:focus,
+.hw-select:focus {
+    outline: none;
+    border-color: var(--neon-cyan);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 0 2px var(--neon-cyan-glow);
+}
+
+.hw-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    color: var(--label);
+}
+.hw-field-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    min-height: var(--tap);
+}
+.hw-field-row input[type="checkbox"],
+.hw-field-row input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--neon-magenta);
+    cursor: pointer;
+}
+
+/* ---------- Cheatsheet overlay ---------- */
+.cheatsheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 1rem;
+}
+.cheatsheet-overlay.open { display: flex; }
+.cheatsheet {
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 1.5rem 1.2rem;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.6), 0 0 24px var(--neon-magenta-glow);
+}
+.cheatsheet h3 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.cheatsheet h3 .hw-led { background: var(--neon-magenta); box-shadow: 0 0 8px var(--neon-magenta-glow); }
+.cheatsheet dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.55rem 1.2rem;
+    align-items: center;
+}
+.cheatsheet dt {
+    font-family: var(--font-mono);
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.cheatsheet dd {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+.cheatsheet-close {
+    margin-top: 1rem;
+    width: 100%;
+}

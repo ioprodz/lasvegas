@@ -6,6 +6,7 @@ use std::sync::mpsc;
 use crate::command::{AudioAnalysis, Command, StateUpdate};
 use crate::hardware::calibration::Calibration;
 use crate::hardware::network;
+use crate::hardware::shortcuts::Shortcuts;
 
 pub fn start(
     addr: &str,
@@ -31,6 +32,12 @@ pub fn start(
                 }
                 StateUpdate::CalibrationData(json) => {
                     let msg = format!("calibration:{}", json);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
+                StateUpdate::ShortcutsData(csv) => {
+                    let msg = format!("shortcuts:{}", csv);
                     for responder in clients.values() {
                         responder.send(Message::Text(msg.clone()));
                     }
@@ -104,6 +111,8 @@ pub fn start(
                     clients.insert(client_id, responder);
                     // Send current calibration to new client
                     let _ = cmd_tx.send(Command::GetCalibration);
+                    // Send current shortcut mapping
+                    let _ = cmd_tx.send(Command::GetShortcuts);
                     // Send a fresh network snapshot
                     let _ = cmd_tx.send(Command::NetList);
                 }
@@ -146,6 +155,10 @@ fn parse_command(text: &str) -> Option<Command> {
         Some(Command::SaveCalibration)
     } else if text == "get_calibration" {
         Some(Command::GetCalibration)
+    } else if let Some(csv) = text.strip_prefix("shortcuts:set:") {
+        Some(Command::SetShortcuts(Shortcuts::from_csv(csv)))
+    } else if text == "get_shortcuts" {
+        Some(Command::GetShortcuts)
     } else if text == "hw_audio:list" {
         Some(Command::ListAudioDevices)
     } else if let Some(device_id) = text.strip_prefix("hw_audio:start:") {

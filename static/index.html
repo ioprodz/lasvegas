@@ -2,456 +2,560 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#07070d">
     <title>Las Vegas LED Controller</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <button class="sidebar-toggle" id="sidebar-toggle">&#9776;</button>
-
     <div class="app">
+
+        <!-- Top bar (persistent) -->
+        <header class="topbar">
+            <button class="hamburger" id="sidebar-toggle" aria-label="Open menu">&#9776;</button>
+            <div class="topbar-brand">
+                <span class="brand-dot"></span>
+                <span>Las Vegas</span>
+            </div>
+
+            <span class="hw-chip" id="running-chip" aria-live="polite" hidden>
+                <span class="hw-led magenta on"></span>
+                <span id="running-chip-text">Idle</span>
+            </span>
+
+            <button class="hw-button tone-stop sm topbar-stop" id="stop-btn" type="button" aria-label="Stop animation">
+                Stop
+                <span class="kbd">Esc</span>
+            </button>
+
+            <span class="topbar-spacer"></span>
+
+            <div class="topbar-actions">
+                <button class="hw-button tone-ghost sm" id="preview-toggle" type="button" title="Toggle LED preview">
+                    <span aria-hidden="true">&#9776;</span>
+                    <span class="mobile-hide">Preview</span>
+                </button>
+                <button class="hw-button tone-ghost sm" id="help-btn" type="button" title="Keyboard shortcuts (?)">
+                    ?
+                </button>
+            </div>
+        </header>
+
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h1>Las Vegas</h1>
-                <div id="status" class="disconnected">Offline</div>
-            </div>
+            <div class="sidebar-section-label">Control</div>
+            <button class="nav-item" data-page="performance">
+                <span class="icon">&#127908;</span> Performance
+            </button>
 
-            <div class="sidebar-section">
-                <div class="sidebar-section-label">Animations</div>
-                <button class="nav-item" data-page="animations" data-anim="rainbow">
-                    <span class="icon">&#127752;</span> Rainbow Cycle
-                </button>
-                <button class="nav-item" data-page="animations" data-anim="pulse">
-                    <span class="icon">&#10024;</span> Pulse
-                </button>
-                <button class="nav-item" data-page="animations" data-anim="chase">
-                    <span class="icon">&#9889;</span> Color Chase
-                </button>
-            </div>
-
-            <div class="sidebar-divider"></div>
-
-            <div class="sidebar-section">
-                <div class="sidebar-section-label">Audio Reactive</div>
-                <button class="nav-item" data-page="audio">
-                    <span class="icon">&#127926;</span> Audio Reactive
-                </button>
-            </div>
-
-            <div class="sidebar-divider"></div>
-
-            <div class="sidebar-section">
-                <div class="sidebar-section-label">Settings</div>
-                <button class="nav-item" data-page="bluetooth">
-                    <span class="icon">&#127247;</span> Bluetooth
-                </button>
-                <button class="nav-item" data-page="network">
-                    <span class="icon">&#128246;</span> Network
-                </button>
-                <button class="nav-item" data-page="calibrate" id="nav-calibrate">
-                    <span class="icon">&#9881;</span> Calibrate
-                </button>
-            </div>
+            <div class="sidebar-section-label">Settings</div>
+            <button class="nav-item" data-page="calibrate">
+                <span class="icon">&#9881;</span> Calibrate
+            </button>
+            <button class="nav-item" data-page="network">
+                <span class="icon">&#128246;</span> Network
+            </button>
+            <button class="nav-item" data-page="bluetooth">
+                <span class="icon">&#127247;</span> Bluetooth
+            </button>
 
             <div class="sidebar-footer">
-                <button class="stop-btn" id="stop-btn" disabled>Stop Animation</button>
+                <span class="hw-led" id="conn-led" aria-hidden="true"></span>
+                <span id="conn-text">Offline</span>
             </div>
         </aside>
 
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-        <!-- Main -->
-        <main class="main preview-top" id="main">
-            <!-- Content -->
+        <!-- Main area: LED dock + page content -->
+        <main class="main">
+
+            <!-- LED preview dock (persistent) -->
+            <div class="led-dock" id="led-dock">
+                <div class="led-grid" id="grid" aria-label="LED preview"></div>
+            </div>
+
             <div class="content">
-                <!-- Animations page -->
-                <div id="page-animations" class="page active">
+
+                <!-- ===== Performance ===== -->
+                <div id="page-performance" class="page active">
                     <div class="content-header">
-                        <h2>Animations</h2>
-                    </div>
-                    <div class="card-list" id="basic-anims">
-                        <div class="anim-card" data-anim="rainbow">
-                            <h3>Rainbow Cycle</h3>
-                            <p>Smooth rotating rainbow across all LEDs. Full spectrum hue sweep.</p>
-                        </div>
-                        <div class="anim-card" data-anim="pulse">
-                            <h3>Pulse</h3>
-                            <p>Warm white breathing effect. Gentle fade in and out.</p>
-                        </div>
-                        <div class="anim-card" data-anim="chase">
-                            <h3>Color Chase</h3>
-                            <p>Cyan light segment chasing around the strip.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Calibrate page -->
-                <div id="page-calibrate" class="page">
-                    <div class="content-header">
-                        <h2>Calibrate LEDs</h2>
+                        <h2>Performance</h2>
                     </div>
 
-                    <div class="cal-section">
-                        <div class="section-label">Test Color</div>
-                        <div class="cal-color-test">
-                            <input type="color" id="cal-color" value="#ffffff">
-                            <div>
-                                <label style="font-size:0.75rem;color:#888;">Brightness</label>
-                                <input type="range" id="cal-brightness" min="0" max="255" value="255">
+                    <!-- 3-column area: shortcuts grid · animation list · signal panel.
+                         Audio picker spans the right two columns above the library + signal. -->
+                    <div class="perf-cols">
+
+                        <!-- Col 1: 3×3 shortcuts grid (spans both rows) -->
+                        <section class="hw-panel perf-shortcuts">
+                            <div class="hw-label">Shortcuts</div>
+                            <div class="shortcut-grid" id="shortcut-grid">
+                                <div class="shortcut-slot" data-slot="0"><span class="slot-num">1</span></div>
+                                <div class="shortcut-slot" data-slot="1"><span class="slot-num">2</span></div>
+                                <div class="shortcut-slot" data-slot="2"><span class="slot-num">3</span></div>
+                                <div class="shortcut-slot" data-slot="3"><span class="slot-num">4</span></div>
+                                <div class="shortcut-slot" data-slot="4"><span class="slot-num">5</span></div>
+                                <div class="shortcut-slot" data-slot="5"><span class="slot-num">6</span></div>
+                                <div class="shortcut-slot" data-slot="6"><span class="slot-num">7</span></div>
+                                <div class="shortcut-slot" data-slot="7"><span class="slot-num">8</span></div>
+                                <div class="shortcut-slot" data-slot="8"><span class="slot-num">9</span></div>
                             </div>
-                            <button class="cal-btn cal-btn-test" id="cal-fill-btn">Fill Strip</button>
-                            <button class="cal-btn cal-btn-reset" id="cal-off-btn">LEDs Off</button>
-                        </div>
-                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
-                            <button class="cal-btn cal-btn-test" data-test-color="255,0,0">Red Only</button>
-                            <button class="cal-btn cal-btn-test" data-test-color="0,255,0">Green Only</button>
-                            <button class="cal-btn cal-btn-test" data-test-color="0,0,255">Blue Only</button>
-                            <button class="cal-btn cal-btn-test" data-test-color="255,255,255">White</button>
-                            <button class="cal-btn cal-btn-test" data-test-color="128,128,128">50% Gray</button>
-                            <button class="cal-btn cal-btn-test" data-test-color="32,32,32">Low Gray</button>
-                        </div>
-                    </div>
-
-                    <div class="cal-section">
-                        <div class="section-label">Channel Calibration</div>
-                        <div class="cal-channels">
-                        <div class="cal-channel">
-                            <div class="cal-channel-header">
-                                <div class="cal-channel-dot" style="background:#ff4444;"></div>
-                                <span class="cal-channel-name">Red</span>
+                            <div class="hw-label" style="margin-top:0.8rem;font-size:9px;color:var(--text-dim);">
+                                Drag animations into a slot · keys <span class="kbd">1</span>–<span class="kbd">9</span>
                             </div>
-                            <div class="cal-slider-row">
-                                <label>Range</label>
-                                <div class="dual-range" data-channel="r">
-                                    <div class="dual-range-track"></div>
-                                    <div class="dual-range-fill" id="cal-r-fill" style="background:#ff4444;"></div>
-                                    <input type="range" id="cal-r-min" min="0" max="255" value="0">
-                                    <input type="range" id="cal-r-max" min="0" max="255" value="255">
+                        </section>
+
+                        <!-- Top of right area: unified audio picker (spans cols 2-3) -->
+                        <section class="hw-panel audio-picker">
+                            <div class="audio-picker-row">
+                                <div class="audio-picker-modes" role="radiogroup" aria-label="Audio source">
+                                    <button class="hw-button audio-mode-btn" id="audio-mode-mic" data-mode="mic" type="button">
+                                        <span aria-hidden="true">&#127908;</span>
+                                        <span>Computer Mic</span>
+                                        <span class="kbd">M</span>
+                                    </button>
+                                    <button class="hw-button audio-mode-btn mobile-hide" id="audio-mode-tab" data-mode="tab" type="button">
+                                        <span aria-hidden="true">&#128187;</span>
+                                        <span>Browser Tab</span>
+                                        <span class="kbd">B</span>
+                                    </button>
+                                    <div class="audio-mode-hw-wrap">
+                                        <button class="hw-button audio-mode-btn" id="audio-mode-hw" data-mode="hw" type="button" disabled aria-haspopup="menu" aria-expanded="false">
+                                            <span aria-hidden="true">&#127911;</span>
+                                            <span id="audio-mode-hw-label">HW Input</span>
+                                            <span class="kbd">H</span>
+                                            <span class="audio-mode-caret" aria-hidden="true">&#9662;</span>
+                                        </button>
+                                        <div class="hw-device-menu" id="hw-device-menu" role="menu" hidden>
+                                            <div class="hw-device-empty">No devices found</div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span class="cal-value" id="cal-r-range-val">0-255</span>
+                                <button class="hw-button tone-stop" id="audio-stop-btn" type="button" disabled>
+                                    <span aria-hidden="true">&#9209;</span>
+                                    <span>Stop</span>
+                                </button>
                             </div>
-                            <div class="cal-slider-row">
-                                <label>Gamma</label>
-                                <input type="range" id="cal-r-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
-                                <span class="cal-value" id="cal-r-gamma-val">1.00</span>
-                            </div>
-                        </div>
+                        </section>
 
-                        <div class="cal-channel">
-                            <div class="cal-channel-header">
-                                <div class="cal-channel-dot" style="background:#44ff44;"></div>
-                                <span class="cal-channel-name">Green</span>
-                            </div>
-                            <div class="cal-slider-row">
-                                <label>Range</label>
-                                <div class="dual-range" data-channel="g">
-                                    <div class="dual-range-track"></div>
-                                    <div class="dual-range-fill" id="cal-g-fill" style="background:#44ff44;"></div>
-                                    <input type="range" id="cal-g-min" min="0" max="255" value="0">
-                                    <input type="range" id="cal-g-max" min="0" max="255" value="255">
-                                </div>
-                                <span class="cal-value" id="cal-g-range-val">0-255</span>
-                            </div>
-                            <div class="cal-slider-row">
-                                <label>Gamma</label>
-                                <input type="range" id="cal-g-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
-                                <span class="cal-value" id="cal-g-gamma-val">1.00</span>
-                            </div>
-                        </div>
-
-                        <div class="cal-channel">
-                            <div class="cal-channel-header">
-                                <div class="cal-channel-dot" style="background:#4444ff;"></div>
-                                <span class="cal-channel-name">Blue</span>
-                            </div>
-                            <div class="cal-slider-row">
-                                <label>Range</label>
-                                <div class="dual-range" data-channel="b">
-                                    <div class="dual-range-track"></div>
-                                    <div class="dual-range-fill" id="cal-b-fill" style="background:#4444ff;"></div>
-                                    <input type="range" id="cal-b-min" min="0" max="255" value="0">
-                                    <input type="range" id="cal-b-max" min="0" max="255" value="255">
-                                </div>
-                                <span class="cal-value" id="cal-b-range-val">0-255</span>
-                            </div>
-                            <div class="cal-slider-row">
-                                <label>Gamma</label>
-                                <input type="range" id="cal-b-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
-                                <span class="cal-value" id="cal-b-gamma-val">1.00</span>
-                            </div>
-                        </div>
-                        </div>
-                    </div>
-
-                    <div class="cal-actions">
-                        <button class="cal-btn cal-btn-save" id="cal-save-btn">Save Calibration</button>
-                        <button class="cal-btn cal-btn-reset" id="cal-reset-btn">Reset to Default</button>
-                    </div>
-                </div>
-
-                <!-- Audio page -->
-                <div id="page-audio" class="page">
-                    <div class="audio-split">
-                        <!-- Left: scrollable animation list -->
-                        <div class="audio-split-left">
-                            <div class="section-label">Audio Animations</div>
-                            <div class="audio-anim-list" id="audio-anims">
-                                <div class="anim-card" data-anim="audio_chase">
+                        <!-- Col 2: animation library -->
+                        <section class="hw-panel perf-library">
+                            <div class="hw-label">Animations</div>
+                            <div class="anim-list" id="anim-list">
+                                <button class="anim-card" data-anim="rainbow" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <h3>Rainbow Cycle</h3>
+                                    <p>Smooth rotating rainbow across all LEDs. Full spectrum hue sweep.</p>
+                                </button>
+                                <button class="anim-card" data-anim="pulse" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <h3>Pulse</h3>
+                                    <p>Warm white breathing effect. Gentle fade in and out.</p>
+                                </button>
+                                <button class="anim-card" data-anim="chase" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <h3>Color Chase</h3>
+                                    <p>Cyan light segment chasing around the strip.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_chase" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Audio Chase</h3>
                                     <p>Light chases around strip. Speed from bass, color from dominant frequency.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_sparkle">
+                                </button>
+                                <button class="anim-card" data-anim="audio_sparkle" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Sparkle Rain</h3>
-                                    <p>High frequencies spawn bright sparks at random positions. Bass drives a warm background glow.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_energy">
+                                    <p>High frequencies spawn bright sparks. Bass drives a warm background glow.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_energy" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Energy Bars</h3>
-                                    <p>Each row is a frequency band with centered energy bars. Smooth attack/decay for fluid motion.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_hybrid">
+                                    <p>Each row is a frequency band with centered energy bars. Smooth attack/decay.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_hybrid" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Hybrid</h3>
-                                    <p>Six blocks alternating Pulse and Chase. Each block has its own phase for varied, layered patterns.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_synesthesia4">
+                                    <p>Six blocks alternating Pulse and Chase, each with its own phase.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_synesthesia4" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Synesthesia</h3>
-                                    <p>Melody dot + hybrid blocks. The pitch-tracking dot floats on top of hybrid's classic animations. Fast melody movement reshuffles the layout.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_harmonic2">
+                                    <p>Melody dot + hybrid blocks. Fast melody movement reshuffles the layout.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_harmonic2" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Harmonic V2</h3>
-                                    <p>Symmetric, cohesive blocks designed for 6x60. Aurora curtains, diamond breathe, rain, gradient sweep, mirror bars, and firefly drift. Mirrored layout for visual balance. Same chords = same look.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_harmonic3">
+                                    <p>Aurora curtains, diamond breathe, rain, gradient sweep, mirror bars, firefly drift.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_harmonic3" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Harmonic V3</h3>
-                                    <p>Counter-motion blocks. Each block's direction is deterministically reversed or forward from the chord fingerprint. Chases, waves, and pulses flow in opposing directions for visual counterpoint.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_harmonic4">
+                                    <p>Counter-motion blocks. Chases, waves, and pulses flow in opposing directions.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_harmonic4" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Harmonic V4</h3>
-                                    <p>The best of V2 and V3. Beautiful aurora curtains, diamond breathe, rain, gradient sweeps, mirror bars, and firefly drift — all with per-block counter-motion. Mirrored blocks flow in opposite directions. Same chords = same look, but with visual counterpoint.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_harmonic5">
+                                    <p>The best of V2 and V3, mirrored blocks flowing in opposite directions.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_harmonic5" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Harmonic V5</h3>
-                                    <p>Illusions &amp; organic FX. Fire with rising embers, vortex spirals, lava blobs that merge and split, plasma interference, swimmer dots on Lissajous orbits, and expanding strobe rings. Melody speed drives animation pace; chords drive colors.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_harmonic6">
-                                    <h3>Harmonic V6</h3>
-                                    <p>Pastel Dreams. Soft orbiting particles trace block perimeters, harmonic waves tilt with frequency, bubbles float with treble, ribbons weave with BPM, petals bloom with beat, and clouds drift and blend. All in dreamy pastel tones.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_harmonic7">
+                                    <p>Illusions &amp; organic FX. Fire, vortex, lava, plasma, swimmers, strobe rings.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_harmonic6" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
+                                    <h3>Pastel Dreams</h3>
+                                    <p>Soft orbiting particles, harmonic waves, bubbles, ribbons, petals, clouds.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_harmonic7" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Tidal</h3>
-                                    <p>No blocks, no particles. The whole strip is one flowing surface. Six rows map to six frequency bands creating luminous strata. Color tides sweep with tempo, melody glows as a traveling light, kicks send ripples outward. Pure smooth gradients.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_harmonic8">
+                                    <p>One flowing surface. Six rows map to frequency bands; color tides sweep with tempo.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_harmonic8" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Drift</h3>
-                                    <p>Tidal background with soft glowing orbs drifting in smooth Lissajous curves. Note changes spawn orbs at the melody position, kicks burst new ones across the strip. Orbs float gracefully over flowing color strata. Zero flicker.</p>
-                                </div>
-                                <div class="anim-card" data-anim="audio_fire">
+                                    <p>Tidal background with glowing orbs drifting in smooth Lissajous curves.</p>
+                                </button>
+                                <button class="anim-card" data-anim="audio_fire" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Fire</h3>
-                                    <p>Realistic fire simulation across the full grid. Bass and energy inject heat at the bottom, which rises, spreads sideways, and cools. Rendered with a fire palette from black through red, orange, yellow to white hot.</p>
-                                </div>
-                                <div class="anim-card" data-anim="pacman">
+                                    <p>Realistic fire simulation. Bass injects heat; rises, spreads, cools.</p>
+                                </button>
+                                <button class="anim-card" data-anim="pacman" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Pac-Man</h3>
-                                    <p>Pac-Man cruises across the strip eating dots on every beat. Mouth opens and closes to the rhythm. Two ghosts trail behind with wiggling tentacles. Power pellets pulse, dots respawn ahead. Dark blue maze background.</p>
-                                </div>
-                                <div class="anim-card" data-anim="retro_arcade">
+                                    <p>Pac-Man cruises across the strip eating dots on every beat. Two ghosts trail behind.</p>
+                                </button>
+                                <button class="anim-card" data-anim="retro_arcade" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Retro Arcade</h3>
-                                    <p>Six classic games in chord-driven blocks: Space Invaders, Pong, Snake, Flappy Bird, Nyan Cat, and Mario. Chord progressions shuffle which game plays in each block. Kicks trigger jumps, flaps, and bullets. BPM drives game speed.</p>
-                                </div>
-                                <div class="anim-card" data-anim="game_of_life">
+                                    <p>Six classic games in chord-driven blocks: Invaders, Pong, Snake, Flappy, Nyan, Mario.</p>
+                                </button>
+                                <button class="anim-card" data-anim="game_of_life" data-audio="1" type="button" draggable="true">
+                                    <span class="anim-led"></span>
+                                    <span class="audio-mark" aria-label="Audio reactive">&#9835;</span>
                                     <h3>Game of Life</h3>
-                                    <p>Conway's Game of Life on the LED grid. Simulation speed tracks BPM and energy. Kicks spawn classic shapes (gliders, spaceships, R-pentominos). When cells die off, new patterns auto-spawn. Cell colors follow chord changes, aging shifts hue over time.</p>
+                                    <p>Conway's Game of Life on the LED grid. Speed tracks BPM; kicks spawn shapes.</p>
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- Col 3: signal (Viz / Stats tabs) -->
+                        <section class="hw-panel perf-signal">
+                            <div class="signal-header">
+                                <span class="hw-label" style="margin:0;">Signal</span>
+                                <div class="hw-segmented signal-tabs" role="tablist" id="signal-tabs">
+                                    <button type="button" role="tab" data-tab="viz" class="active">Viz</button>
+                                    <button type="button" role="tab" data-tab="stats">Stats</button>
+                                </div>
+                            </div>
+                            <div class="signal-pane" data-pane="viz">
+                                <canvas id="freq-canvas"></canvas>
+                                <canvas id="chromatic-circle"></canvas>
+                            </div>
+                            <div class="signal-pane" data-pane="stats" hidden>
+                                <div id="freq-stats" class="audio-stats"></div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- ===== Calibrate ===== -->
+                <div id="page-calibrate" class="page">
+                    <div class="content-header"><h2>Calibrate LEDs</h2></div>
+
+                    <div class="hw-panel">
+                        <div class="hw-label">Test Color</div>
+                        <div class="cal-color-test">
+                            <input type="color" id="cal-color" value="#ffffff">
+                            <div class="brightness-block">
+                                <label>Brightness</label>
+                                <input type="range" class="hw-slider" id="cal-brightness" min="0" max="255" value="255">
+                            </div>
+                            <button class="hw-button tone-queue sm" id="cal-fill-btn" type="button">Fill Strip</button>
+                            <button class="hw-button tone-ghost sm" id="cal-off-btn" type="button">LEDs Off</button>
+                        </div>
+                        <div class="cal-test-row">
+                            <button class="hw-button tone-ghost sm" data-test-color="255,0,0" type="button">Red</button>
+                            <button class="hw-button tone-ghost sm" data-test-color="0,255,0" type="button">Green</button>
+                            <button class="hw-button tone-ghost sm" data-test-color="0,0,255" type="button">Blue</button>
+                            <button class="hw-button tone-ghost sm" data-test-color="255,255,255" type="button">White</button>
+                            <button class="hw-button tone-ghost sm" data-test-color="128,128,128" type="button">50% Gray</button>
+                            <button class="hw-button tone-ghost sm" data-test-color="32,32,32" type="button">Low Gray</button>
+                        </div>
+                    </div>
+
+                    <div class="hw-panel">
+                        <div class="hw-label">Channel Calibration</div>
+                        <div class="cal-channels">
+                            <div class="cal-channel r">
+                                <div class="cal-channel-header">
+                                    <div class="cal-channel-dot"></div>
+                                    <span class="cal-channel-name">Red</span>
+                                </div>
+                                <div class="cal-slider-row">
+                                    <label>Range</label>
+                                    <div class="dual-range" data-channel="r">
+                                        <div class="dual-range-track"></div>
+                                        <div class="dual-range-fill" id="cal-r-fill" style="background:#ff4d6d;"></div>
+                                        <input type="range" id="cal-r-min" min="0" max="255" value="0">
+                                        <input type="range" id="cal-r-max" min="0" max="255" value="255">
+                                    </div>
+                                    <span class="cal-value" id="cal-r-range-val">0-255</span>
+                                </div>
+                                <div class="cal-slider-row">
+                                    <label>Gamma</label>
+                                    <input type="range" class="hw-slider" id="cal-r-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
+                                    <span class="cal-value" id="cal-r-gamma-val">1.00</span>
+                                </div>
+                            </div>
+                            <div class="cal-channel g">
+                                <div class="cal-channel-header">
+                                    <div class="cal-channel-dot"></div>
+                                    <span class="cal-channel-name">Green</span>
+                                </div>
+                                <div class="cal-slider-row">
+                                    <label>Range</label>
+                                    <div class="dual-range" data-channel="g">
+                                        <div class="dual-range-track"></div>
+                                        <div class="dual-range-fill" id="cal-g-fill" style="background:#34d399;"></div>
+                                        <input type="range" id="cal-g-min" min="0" max="255" value="0">
+                                        <input type="range" id="cal-g-max" min="0" max="255" value="255">
+                                    </div>
+                                    <span class="cal-value" id="cal-g-range-val">0-255</span>
+                                </div>
+                                <div class="cal-slider-row">
+                                    <label>Gamma</label>
+                                    <input type="range" class="hw-slider" id="cal-g-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
+                                    <span class="cal-value" id="cal-g-gamma-val">1.00</span>
+                                </div>
+                            </div>
+                            <div class="cal-channel b">
+                                <div class="cal-channel-header">
+                                    <div class="cal-channel-dot"></div>
+                                    <span class="cal-channel-name">Blue</span>
+                                </div>
+                                <div class="cal-slider-row">
+                                    <label>Range</label>
+                                    <div class="dual-range" data-channel="b">
+                                        <div class="dual-range-track"></div>
+                                        <div class="dual-range-fill" id="cal-b-fill" style="background:#6a9fff;"></div>
+                                        <input type="range" id="cal-b-min" min="0" max="255" value="0">
+                                        <input type="range" id="cal-b-max" min="0" max="255" value="255">
+                                    </div>
+                                    <span class="cal-value" id="cal-b-range-val">0-255</span>
+                                </div>
+                                <div class="cal-slider-row">
+                                    <label>Gamma</label>
+                                    <input type="range" class="hw-slider" id="cal-b-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
+                                    <span class="cal-value" id="cal-b-gamma-val">1.00</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Right: fixed controls & visualizer -->
-                        <div class="audio-split-right">
-                            <div class="section-label">Audio Source</div>
-                            <div class="audio-controls">
-                                <button class="audio-btn" id="btn-mic">Microphone</button>
-                                <button class="audio-btn" id="btn-system">System Audio (Tab)</button>
-                                <button class="audio-btn" id="btn-stop-audio" disabled>Stop Audio</button>
-                            </div>
-
-                            <div class="section-label">Hardware Source (Pi Input)</div>
-                            <div class="audio-controls" id="hw-audio-controls">
-                                <select id="hw-audio-device" class="audio-select" disabled>
-                                    <option value="">No devices found</option>
-                                </select>
-                                <div style="display:flex;gap:0.5rem;">
-                                    <button class="audio-btn" id="btn-hw-start" disabled>Start</button>
-                                    <button class="audio-btn" id="btn-hw-stop" disabled>Stop</button>
-                                </div>
-                            </div>
-
-                            <div class="section-label">Frequency Bands</div>
-                            <div class="audio-viz-row">
-                                <div class="audio-viz-left">
-                                    <canvas id="freq-canvas"></canvas>
-                                    <canvas id="chromatic-circle"></canvas>
-                                </div>
-                                <div id="freq-stats" class="audio-stats"></div>
-                            </div>
+                        <div class="cal-actions">
+                            <button class="hw-button tone-go" id="cal-save-btn" type="button">Save Calibration</button>
+                            <button class="hw-button tone-warn" id="cal-reset-btn" type="button">Reset to Default</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Network page -->
+                <!-- ===== Network ===== -->
                 <div id="page-network" class="page">
-                    <div class="content-header">
-                        <h2>Network</h2>
-                    </div>
+                    <div class="content-header"><h2>Network</h2></div>
 
                     <div id="net-stage-banner" class="net-stage-banner" style="display:none;"></div>
-                    <div id="net-status-msg" class="bt-status"></div>
+                    <div id="net-status-msg" class="net-status-msg"></div>
 
-                    <div class="bt-section">
-                        <div class="section-label">Interfaces</div>
+                    <div class="hw-panel">
+                        <div class="hw-label">Interfaces</div>
                         <div class="bt-actions">
-                            <button class="cal-btn cal-btn-reset" id="net-refresh-btn">Refresh</button>
+                            <button class="hw-button tone-ghost sm" id="net-refresh-btn" type="button">Refresh</button>
                         </div>
-                        <div id="net-iface-list" class="bt-device-list">
-                            <div class="bt-empty">Loading...</div>
+                        <div id="net-iface-list" class="device-list">
+                            <div class="device-empty">Loading...</div>
                         </div>
                     </div>
 
-                    <div class="bt-section">
-                        <div class="section-label">Access Point (TP-Link USB)</div>
-                        <div id="net-ap-iface-status" style="font-size:0.85rem;margin-bottom:0.5rem;"></div>
+                    <div class="hw-panel">
+                        <div class="hw-label">Access Point (TP-Link USB)</div>
+                        <div id="net-ap-iface-status" style="font-size:0.85rem;margin-bottom:0.5rem;color:var(--text-muted);"></div>
                         <div class="net-form">
-                            <label>SSID
-                                <input type="text" id="net-ap-ssid" placeholder="lasvegas">
-                            </label>
-                            <label>Password (min 8 chars)
-                                <input type="text" id="net-ap-password" placeholder="...">
-                            </label>
-                            <label>Band
-                                <select id="net-ap-band">
-                                    <option value="bg">2.4 GHz (b/g/n)</option>
-                                    <option value="a">5 GHz (a/n/ac)</option>
-                                </select>
-                            </label>
-                            <label>Channel (0 = auto)
-                                <input type="number" id="net-ap-channel" min="0" max="165" value="0">
-                            </label>
-                            <label class="net-form-row-toggle">
+                            <div class="net-grid">
+                                <label class="hw-field">SSID
+                                    <input type="text" class="hw-input" id="net-ap-ssid" placeholder="lasvegas">
+                                </label>
+                                <label class="hw-field">Password (min 8 chars)
+                                    <input type="text" class="hw-input" id="net-ap-password" placeholder="...">
+                                </label>
+                                <label class="hw-field">Band
+                                    <select class="hw-select" id="net-ap-band">
+                                        <option value="bg">2.4 GHz (b/g/n)</option>
+                                        <option value="a">5 GHz (a/n/ac)</option>
+                                    </select>
+                                </label>
+                                <label class="hw-field">Channel (0 = auto)
+                                    <input type="number" class="hw-input" id="net-ap-channel" min="0" max="165" value="0">
+                                </label>
+                            </div>
+                            <label class="hw-field-row">
                                 <input type="checkbox" id="net-ap-enabled" checked>
                                 Enable AP (auto-on when adapter present)
                             </label>
                         </div>
-                        <div class="bt-actions">
-                            <button class="cal-btn cal-btn-save" id="net-ap-save-btn">Save AP Config</button>
+                        <div class="bt-actions" style="margin-top:0.6rem;">
+                            <button class="hw-button tone-go sm" id="net-ap-save-btn" type="button">Save AP Config</button>
                         </div>
-                        <div class="section-label" style="margin-top:0.75rem;">Connected Clients</div>
-                        <div id="net-ap-clients" class="bt-device-list">
-                            <div class="bt-empty">No clients connected to AP.</div>
-                        </div>
-                    </div>
-
-                    <div class="bt-section">
-                        <div class="section-label">Wi-Fi Networks (onboard wlan0)</div>
-                        <div class="bt-actions">
-                            <button class="cal-btn cal-btn-save" id="net-scan-btn">Scan</button>
-                        </div>
-                        <div id="net-scan-list" class="bt-device-list" style="margin-bottom:0.75rem;">
-                            <div class="bt-empty">No scan results yet. Click "Scan".</div>
-                        </div>
-                        <div class="section-label">Saved Networks</div>
-                        <div id="net-known-wifi-list" class="bt-device-list" style="margin-bottom:0.75rem;">
-                            <div class="bt-empty">No saved networks.</div>
-                        </div>
-                        <div class="section-label">Add / Edit Saved Network</div>
-                        <div class="net-form">
-                            <label>SSID
-                                <input type="text" id="net-new-wifi-ssid">
-                            </label>
-                            <label>Password (blank for open)
-                                <input type="password" id="net-new-wifi-password">
-                            </label>
-                            <label>Priority (higher = preferred)
-                                <input type="number" id="net-new-wifi-priority" value="0">
-                            </label>
-                            <label class="net-form-row-toggle">
-                                <input type="checkbox" id="net-new-wifi-hidden">
-                                Hidden network
-                            </label>
-                        </div>
-                        <div class="bt-actions">
-                            <button class="cal-btn cal-btn-save" id="net-add-wifi-btn">Save Network</button>
+                        <div class="hw-label" style="margin-top:0.9rem;">Connected Clients</div>
+                        <div id="net-ap-clients" class="device-list">
+                            <div class="device-empty">No clients connected to AP.</div>
                         </div>
                     </div>
 
-                    <div class="bt-section">
-                        <div class="section-label">Ethernet (eth0)</div>
-                        <div style="font-size:0.8rem;color:#cfcf6f;margin-bottom:0.5rem;">⚠ Changes here are staged with a 30s auto-revert.</div>
+                    <div class="hw-panel">
+                        <div class="hw-label">Wi-Fi Networks (onboard wlan0)</div>
+                        <div class="bt-actions">
+                            <button class="hw-button tone-queue sm" id="net-scan-btn" type="button">Scan</button>
+                        </div>
+                        <div id="net-scan-list" class="device-list" style="margin-bottom:0.75rem;">
+                            <div class="device-empty">No scan results yet. Click "Scan".</div>
+                        </div>
+                        <div class="hw-label">Saved Networks</div>
+                        <div id="net-known-wifi-list" class="device-list" style="margin-bottom:0.75rem;">
+                            <div class="device-empty">No saved networks.</div>
+                        </div>
+                        <div class="hw-label">Add / Edit Saved Network</div>
                         <div class="net-form">
-                            <label class="net-form-row-toggle">
+                            <div class="net-grid">
+                                <label class="hw-field">SSID
+                                    <input type="text" class="hw-input" id="net-new-wifi-ssid">
+                                </label>
+                                <label class="hw-field">Password (blank for open)
+                                    <input type="password" class="hw-input" id="net-new-wifi-password">
+                                </label>
+                                <label class="hw-field">Priority (higher = preferred)
+                                    <input type="number" class="hw-input" id="net-new-wifi-priority" value="0">
+                                </label>
+                                <label class="hw-field-row">
+                                    <input type="checkbox" id="net-new-wifi-hidden">
+                                    Hidden network
+                                </label>
+                            </div>
+                        </div>
+                        <div class="bt-actions" style="margin-top:0.6rem;">
+                            <button class="hw-button tone-go sm" id="net-add-wifi-btn" type="button">Save Network</button>
+                        </div>
+                    </div>
+
+                    <div class="hw-panel">
+                        <div class="hw-label">Ethernet (eth0)</div>
+                        <div style="font-size:0.8rem;color:var(--neon-amber);margin-bottom:0.5rem;">&#9888; Changes here are staged with a 30s auto-revert.</div>
+                        <div class="net-form">
+                            <label class="hw-field-row">
                                 <input type="radio" name="net-eth-mode" id="net-eth-mode-dhcp" value="dhcp" checked>
                                 DHCP (recommended)
                             </label>
-                            <label class="net-form-row-toggle">
+                            <label class="hw-field-row">
                                 <input type="radio" name="net-eth-mode" id="net-eth-mode-static" value="static">
                                 Static
                             </label>
                             <div id="net-eth-static-fields" style="display:none;">
-                                <label>IP address
-                                    <input type="text" id="net-eth-ip" placeholder="192.168.1.97">
-                                </label>
-                                <label>Prefix length
-                                    <input type="number" id="net-eth-prefix" min="1" max="32" value="24">
-                                </label>
-                                <label>Gateway
-                                    <input type="text" id="net-eth-gateway" placeholder="192.168.1.1">
-                                </label>
-                                <label>DNS (space-separated)
-                                    <input type="text" id="net-eth-dns" placeholder="1.1.1.1 8.8.8.8">
-                                </label>
+                                <div class="net-grid">
+                                    <label class="hw-field">IP address
+                                        <input type="text" class="hw-input" id="net-eth-ip" placeholder="192.168.1.97">
+                                    </label>
+                                    <label class="hw-field">Prefix length
+                                        <input type="number" class="hw-input" id="net-eth-prefix" min="1" max="32" value="24">
+                                    </label>
+                                    <label class="hw-field">Gateway
+                                        <input type="text" class="hw-input" id="net-eth-gateway" placeholder="192.168.1.1">
+                                    </label>
+                                    <label class="hw-field">DNS (space-separated)
+                                        <input type="text" class="hw-input" id="net-eth-dns" placeholder="1.1.1.1 8.8.8.8">
+                                    </label>
+                                </div>
                             </div>
-                            <label class="net-form-row-toggle">
+                            <label class="hw-field-row">
                                 <input type="checkbox" id="net-eth-enabled" checked>
                                 Enable (autoconnect)
                             </label>
                         </div>
-                        <div class="bt-actions">
-                            <button class="cal-btn cal-btn-save" id="net-eth-save-btn">Apply Ethernet</button>
+                        <div class="bt-actions" style="margin-top:0.6rem;">
+                            <button class="hw-button tone-go sm" id="net-eth-save-btn" type="button">Apply Ethernet</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bluetooth page -->
+                <!-- ===== Bluetooth ===== -->
                 <div id="page-bluetooth" class="page">
-                    <div class="content-header">
-                        <h2>Bluetooth</h2>
-                    </div>
+                    <div class="content-header"><h2>Bluetooth</h2></div>
 
-                    <div class="bt-section">
-                        <div class="section-label">Actions</div>
+                    <div class="hw-panel">
+                        <div class="hw-label">Actions</div>
                         <div class="bt-actions">
-                            <button class="cal-btn cal-btn-save" id="bt-scan-btn">Scan for Devices</button>
-                            <button class="cal-btn cal-btn-reset" id="bt-refresh-btn">Refresh List</button>
+                            <button class="hw-button tone-queue sm" id="bt-scan-btn" type="button">Scan for Devices</button>
+                            <button class="hw-button tone-ghost sm" id="bt-refresh-btn" type="button">Refresh List</button>
                         </div>
-                        <div id="bt-status" class="bt-status"></div>
+                        <div id="bt-status" class="net-status-msg"></div>
                     </div>
 
-                    <div class="bt-section">
-                        <div class="section-label">Devices</div>
-                        <div id="bt-device-list" class="bt-device-list">
-                            <div class="bt-empty">No devices found. Click "Scan for Devices" to discover nearby Bluetooth devices.</div>
+                    <div class="hw-panel">
+                        <div class="hw-label">Devices</div>
+                        <div id="bt-device-list" class="device-list">
+                            <div class="device-empty">No devices found. Click "Scan for Devices" to discover nearby Bluetooth devices.</div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- LED Preview -->
-            <div class="preview-panel">
-                <button class="preview-toggle" id="preview-toggle" title="Toggle preview layout">&#8693;</button>
-                <div class="grid" id="grid"></div>
-            </div>
+            </div><!-- /.content -->
         </main>
+
+    </div><!-- /.app -->
+
+    <!-- Keyboard cheatsheet overlay -->
+    <div class="cheatsheet-overlay" id="cheatsheet-overlay" role="dialog" aria-modal="true" aria-labelledby="cheatsheet-title">
+        <div class="cheatsheet">
+            <h3 id="cheatsheet-title"><span class="hw-led"></span> Keyboard Shortcuts</h3>
+            <dl>
+                <dt><span class="kbd">1</span> &ndash; <span class="kbd">9</span></dt>
+                <dd>Activate shortcut slot</dd>
+                <dt><span class="kbd">&#8592;</span><span class="kbd">&#8593;</span><span class="kbd">&#8594;</span><span class="kbd">&#8595;</span></dt>
+                <dd>Move focus across the shortcut grid</dd>
+                <dt><span class="kbd">Enter</span></dt>
+                <dd>Activate focused slot</dd>
+                <dt><span class="kbd">Esc</span> / <span class="kbd">Space</span></dt>
+                <dd>Stop animation</dd>
+                <dt><span class="kbd">M</span> / <span class="kbd">B</span> / <span class="kbd">H</span></dt>
+                <dd>Computer Mic / Browser Tab / HW Input</dd>
+                <dt><span class="kbd">Tab</span></dt>
+                <dd>Cycle audio sources</dd>
+                <dt><span class="kbd">?</span></dt>
+                <dd>Toggle this overlay</dd>
+            </dl>
+            <button class="hw-button tone-primary cheatsheet-close" id="cheatsheet-close" type="button">Got it</button>
+        </div>
     </div>
 
     <script src="/js/websocket.js"></script>
     <script src="/js/led-preview.js"></script>
+    <script src="/js/topbar.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="/js/animation.js"></script>
     <script src="/js/audio-analysis.js"></script>
@@ -461,6 +565,9 @@
     <script src="/js/calibration.js"></script>
     <script src="/js/bluetooth.js"></script>
     <script src="/js/network.js"></script>
+    <script src="/js/keyboard.js"></script>
+    <script src="/js/cheatsheet.js"></script>
+    <script src="/js/shortcuts.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html>

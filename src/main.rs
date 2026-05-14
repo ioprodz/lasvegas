@@ -5,6 +5,7 @@ mod web;
 use command::{AudioAnalysis, Command, StateUpdate};
 use hardware::calibration::Calibration;
 use hardware::led::LedStrip;
+use hardware::shortcuts::Shortcuts;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
@@ -42,6 +43,10 @@ fn main() {
     // Load saved calibration
     let mut calibration = Calibration::load();
     println!("Loaded calibration: {:?}", calibration);
+
+    // Load saved shortcut slot mapping
+    let mut shortcuts = Shortcuts::load();
+    println!("Loaded shortcuts: {}", shortcuts.to_csv());
 
     // Channels: commands from WebSocket, state updates to WebSocket
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
@@ -133,6 +138,17 @@ fn main() {
                 Command::GetCalibration => {
                     let json = calibration.to_json();
                     let _ = state_tx.send(StateUpdate::CalibrationData(json));
+                }
+                Command::SetShortcuts(s) => {
+                    shortcuts = s;
+                    match shortcuts.save() {
+                        Ok(_) => println!("Shortcuts saved: {}", shortcuts.to_csv()),
+                        Err(e) => println!("Failed to save shortcuts: {}", e),
+                    }
+                    let _ = state_tx.send(StateUpdate::ShortcutsData(shortcuts.to_csv()));
+                }
+                Command::GetShortcuts => {
+                    let _ = state_tx.send(StateUpdate::ShortcutsData(shortcuts.to_csv()));
                 }
                 Command::ListAudioDevices => {
                     let devices = hardware::audio::list_input_devices();

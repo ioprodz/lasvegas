@@ -1,6 +1,6 @@
 // Chromatic circle visualization — shows notes and transitions
 const circleCanvas = document.getElementById('chromatic-circle');
-const circleCtx = circleCanvas.getContext('2d');
+const circleCtx = circleCanvas ? circleCanvas.getContext('2d') : null;
 
 // Note colors (hue-mapped around the circle)
 const NOTE_COLORS = [
@@ -25,6 +25,7 @@ let lastNoteIndex = -1;
 let lastTransitionTime = 0;
 
 function updateChromaticCircle() {
+    if (!circleCanvas || !circleCtx) return;
     const now = performance.now();
 
     // Determine current note index
@@ -103,10 +104,13 @@ function updateChromaticCircle() {
 
 function drawChromaticCircle(now) {
     const rect = circleCanvas.getBoundingClientRect();
-    const dpr = devicePixelRatio;
-    circleCanvas.width = rect.width * dpr;
-    circleCanvas.height = rect.height * dpr;
-    circleCtx.scale(dpr, dpr);
+    if (rect.width === 0 || rect.height === 0) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (circleCanvas.width !== Math.round(rect.width * dpr) || circleCanvas.height !== Math.round(rect.height * dpr)) {
+        circleCanvas.width = Math.round(rect.width * dpr);
+        circleCanvas.height = Math.round(rect.height * dpr);
+    }
+    circleCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const w = rect.width;
     const h = rect.height;
     circleCtx.clearRect(0, 0, w, h);

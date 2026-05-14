@@ -1,0 +1,56 @@
+:root {
+    /* Surfaces */
+    --bg-0: #07070d;
+    --bg-1: #0e0e18;
+    --bg-2: #16162a;
+    --bg-3: #1d1d38;
+    --bg-screen: #050509;
+    --border: #2a2a4a;
+    --border-soft: #1a1a35;
+    --border-strong: #4a4a8a;
+
+    /* Neon identity (Las Vegas) */
+    --neon-magenta: #ff2bd6;
+    --neon-magenta-glow: rgba(255, 43, 214, 0.55);
+    --neon-cyan: #00e6ff;
+    --neon-cyan-glow: rgba(0, 230, 255, 0.55);
+    --neon-amber: #ffcc33;
+    --neon-amber-glow: rgba(255, 204, 51, 0.55);
+    --neon-red: #ff4d6d;
+    --neon-red-glow: rgba(255, 77, 109, 0.55);
+    --neon-green: #34d399;
+    --neon-green-glow: rgba(52, 211, 153, 0.55);
+    --neon-violet: #b56bff;
+
+    /* Text */
+    --text: #f5f5fa;
+    --text-muted: #a0a0b5;
+    --text-dim: #5a5a78;
+    --label: #7a7a98;
+
+    /* Type */
+    --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "Menlo", monospace;
+
+    /* Radii */
+    --radius-sm: 4px;
+    --radius: 8px;
+    --radius-lg: 12px;
+
+    /* Shadows / glow */
+    --shadow-glow-magenta: 0 0 12px var(--neon-magenta-glow);
+    --shadow-glow-cyan: 0 0 12px var(--neon-cyan-glow);
+    --shadow-glow-amber: 0 0 12px var(--neon-amber-glow);
+    --shadow-glow-red: 0 0 12px var(--neon-red-glow);
+    --shadow-glow-green: 0 0 12px var(--neon-green-glow);
+    --shadow-inset: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4);
+    --shadow-panel: 0 1px 0 rgba(255,255,255,0.03), 0 8px 24px rgba(0,0,0,0.4);
+
+    /* Layout */
+    --topbar-h: 52px;
+    --topbar-h-mobile: 44px;
+    --sidebar-w: 240px;
+    --preview-h-mobile: 56px;
+    --preview-h: 88px;
+    --tap: 44px;
+}

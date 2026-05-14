@@ -132,11 +132,10 @@ async function startAudio(mode) {
         };
         timerWorker.postMessage('start');
 
-        document.getElementById('btn-mic').classList.toggle('active', mode === 'mic');
-        document.getElementById('btn-system').classList.toggle('active', mode === 'system');
-        document.getElementById('btn-stop-audio').disabled = false;
+        // State display is handled by app.js setAudioMode() — nothing to do here.
     } catch (err) {
         console.error('Audio capture failed:', err);
+        if (typeof setAudioMode === 'function') setAudioMode(null);
     }
 }
 
@@ -146,9 +145,6 @@ function stopAudio() {
     if (audioStream) audioStream.getTracks().forEach(t => t.stop());
     if (audioCtx) audioCtx.close();
     audioCtx = null; analyser = null; pitchAnalyser = null; audioSource = null; audioStream = null;
-    document.getElementById('btn-mic').classList.remove('active');
-    document.getElementById('btn-system').classList.remove('active');
-    document.getElementById('btn-stop-audio').disabled = true;
     const canvas = document.getElementById('freq-canvas');
-    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }

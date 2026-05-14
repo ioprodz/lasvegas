@@ -19,6 +19,10 @@ function handleWsMessage(event) {
             try {
                 applyCalibrationFromServer(JSON.parse(event.data.slice('calibration:'.length)));
             } catch(e) { console.error('Failed to parse calibration:', e); }
+        } else if (event.data.startsWith('shortcuts:')) {
+            if (typeof applyShortcuts === 'function') {
+                applyShortcuts(event.data.slice('shortcuts:'.length));
+            }
         } else if (event.data.startsWith('hw_audio:devices:')) {
             handleHwDeviceList(event.data.slice('hw_audio:devices:'.length));
         } else if (event.data.startsWith('hw_audio:status:')) {
@@ -78,84 +82,152 @@ function handleHwAudioData(data) {
     }
 }
 
-// Handle hardware device list from server
+// Hardware audio device list — JS-managed (replaces the old hidden <select>).
+let hwDevices = [];                       // [{id, name}, ...]
+let selectedHwDeviceId = null;            // currently-chosen device id
+try {
+    const saved = localStorage.getItem('lv.hwDevice');
+    if (saved) selectedHwDeviceId = saved;
+} catch (_) {}
+
+function setHwButtonLabel(name) {
+    const label = document.getElementById('audio-mode-hw-label');
+    if (label) label.textContent = name || 'HW Input';
+}
+
+function renderHwDeviceMenu() {
+    const menu = document.getElementById('hw-device-menu');
+    if (!menu) return;
+    menu.innerHTML = '';
+    if (hwDevices.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'hw-device-empty';
+        empty.textContent = 'No devices found';
+        menu.appendChild(empty);
+        return;
+    }
+    hwDevices.forEach(d => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'hw-device-item';
+        item.dataset.id = d.id;
+        item.textContent = d.name || d.id;
+        if (d.id === selectedHwDeviceId) item.classList.add('selected');
+        item.addEventListener('click', () => pickHwDevice(d.id));
+        menu.appendChild(item);
+    });
+}
+
+function pickHwDevice(id) {
+    selectedHwDeviceId = id;
+    try { localStorage.setItem('lv.hwDevice', id); } catch (_) {}
+    const dev = hwDevices.find(d => d.id === id);
+    setHwButtonLabel(dev ? dev.name : 'HW Input');
+    closeHwMenu();
+    switchAudioSource('hw');
+}
+
+function openHwMenu() {
+    const menu = document.getElementById('hw-device-menu');
+    const btn = document.getElementById('audio-mode-hw');
+    if (!menu) return;
+    renderHwDeviceMenu();
+    menu.hidden = false;
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    // Focus the previously-selected device (or first) so Enter picks it.
+    const sel = menu.querySelector('.hw-device-item.selected')
+        || menu.querySelector('.hw-device-item');
+    if (sel) sel.focus();
+}
+
+function closeHwMenu() {
+    const menu = document.getElementById('hw-device-menu');
+    const btn = document.getElementById('audio-mode-hw');
+    if (menu) menu.hidden = true;
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function toggleHwMenu() {
+    const menu = document.getElementById('hw-device-menu');
+    if (!menu) return;
+    if (menu.hidden) openHwMenu();
+    else closeHwMenu();
+}
+
+// Close the menu when clicking outside.
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('hw-device-menu');
+    if (!menu || menu.hidden) return;
+    if (e.target.closest('#hw-device-menu') || e.target.closest('#audio-mode-hw')) return;
+    closeHwMenu();
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const menu = document.getElementById('hw-device-menu');
+        if (menu && !menu.hidden) { closeHwMenu(); e.stopPropagation(); }
+    }
+});
+
 function handleHwDeviceList(json) {
     try {
-        const devices = JSON.parse(json);
-        console.log('handleHwDeviceList: received', devices.length, 'devices', json.substring(0, 200));
-        const select = document.getElementById('hw-audio-device');
-        select.innerHTML = '';
-        if (devices.length === 0) {
-            select.innerHTML = '<option value="">No devices found</option>';
-            select.disabled = true;
-            document.getElementById('btn-hw-start').disabled = true;
-        } else {
-            devices.forEach((d, i) => {
-                const opt = document.createElement('option');
-                opt.value = d.id;
-                opt.textContent = d.name || d.id;
-                if (i === 0) opt.selected = true;
-                select.appendChild(opt);
-            });
-            select.disabled = false;
-            document.getElementById('btn-hw-start').disabled = false;
-            console.log('handleHwDeviceList: first option value=' + JSON.stringify(select.value));
+        hwDevices = JSON.parse(json) || [];
+        const hwBtn = document.getElementById('audio-mode-hw');
+        // Clear stale saved selection if that device is gone.
+        if (selectedHwDeviceId && !hwDevices.find(d => d.id === selectedHwDeviceId)) {
+            selectedHwDeviceId = null;
+            try { localStorage.removeItem('lv.hwDevice'); } catch (_) {}
         }
+        if (hwDevices.length === 0) {
+            if (hwBtn) hwBtn.disabled = true;
+            setHwButtonLabel('HW Input');
+        } else {
+            if (hwBtn) hwBtn.disabled = false;
+            const match = selectedHwDeviceId && hwDevices.find(d => d.id === selectedHwDeviceId);
+            setHwButtonLabel(match ? (match.name || 'HW Input') : 'HW Input');
+        }
+        const menu = document.getElementById('hw-device-menu');
+        if (menu && !menu.hidden) renderHwDeviceMenu();
     } catch (e) {
         console.error('Failed to parse device list:', e);
     }
 }
 
+// Unified audio source picker: one of 'mic' | 'tab' | 'hw' is active at a time.
+let currentAudioMode = null;
+function setAudioMode(mode) {
+    currentAudioMode = mode;
+    ['mic', 'tab', 'hw'].forEach(m => {
+        const btn = document.getElementById('audio-mode-' + m);
+        if (btn) btn.classList.toggle('active', m === mode);
+    });
+    const stopBtn = document.getElementById('audio-stop-btn');
+    if (stopBtn) stopBtn.disabled = !mode;
+}
+
 // Handle hardware audio status messages
 function handleHwStatus(status) {
-    const startBtn = document.getElementById('btn-hw-start');
-    const stopBtn = document.getElementById('btn-hw-stop');
-    const select = document.getElementById('hw-audio-device');
-
     if (status === 'started') {
         hwAudioActive = true;
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        select.disabled = true;
-        startBtn.classList.add('active');
-        // Disable browser audio buttons
-        document.getElementById('btn-mic').disabled = true;
-        document.getElementById('btn-system').disabled = true;
+        setAudioMode('hw');
     } else if (status === 'stopped') {
         hwAudioActive = false;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-        select.disabled = false;
-        startBtn.classList.remove('active');
-        // Re-enable browser audio buttons
-        document.getElementById('btn-mic').disabled = false;
-        document.getElementById('btn-system').disabled = false;
+        if (currentAudioMode === 'hw') setAudioMode(null);
     } else if (status.startsWith('error:')) {
         hwAudioActive = false;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-        select.disabled = false;
-        startBtn.classList.remove('active');
-        document.getElementById('btn-mic').disabled = false;
-        document.getElementById('btn-system').disabled = false;
+        if (currentAudioMode === 'hw') setAudioMode(null);
         console.error('Hardware audio error:', status.slice(6));
     }
 }
 
-// Hardware audio controls
 function startHwAudio() {
-    const select = document.getElementById('hw-audio-device');
-    const deviceId = select.value;
-    console.log('startHwAudio: deviceId=' + JSON.stringify(deviceId) + ' options=' + select.options.length + ' disabled=' + select.disabled);
-    if (!deviceId) {
-        console.warn('startHwAudio: no device selected');
+    if (!selectedHwDeviceId) {
+        // No device chosen yet — open the picker.
+        openHwMenu();
         return;
     }
-    // Stop browser audio first (mutual exclusion)
-    stopAudio();
+    stopAudio(); // stop browser-side capture if any
     if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log('startHwAudio: sending hw_audio:start:' + deviceId);
-        ws.send('hw_audio:start:' + deviceId);
+        ws.send('hw_audio:start:' + selectedHwDeviceId);
     }
 }
 
@@ -171,21 +243,46 @@ function requestHwDevices() {
     }
 }
 
-// Audio button listeners
-document.getElementById('btn-mic').addEventListener('click', () => {
-    // Stop hardware audio if active (mutual exclusion)
+// Top-level "switch audio source" — encapsulates stopping the previous mode.
+function switchAudioSource(mode) {
+    // Stop whatever is currently running.
     if (hwAudioActive) stopHwAudio();
-    startAudio('mic');
-});
-document.getElementById('btn-system').addEventListener('click', () => {
-    if (hwAudioActive) stopHwAudio();
-    startAudio('system');
-});
-document.getElementById('btn-stop-audio').addEventListener('click', stopAudio);
+    if (currentAudioMode === 'mic' || currentAudioMode === 'tab') stopAudio();
 
-// Hardware audio button listeners
-document.getElementById('btn-hw-start').addEventListener('click', startHwAudio);
-document.getElementById('btn-hw-stop').addEventListener('click', stopHwAudio);
+    if (!mode) { setAudioMode(null); return; }
+
+    if (mode === 'mic') {
+        setAudioMode('mic');
+        startAudio('mic');
+    } else if (mode === 'tab') {
+        setAudioMode('tab');
+        startAudio('system'); // legacy 'system' mode = getDisplayMedia
+    } else if (mode === 'hw') {
+        setAudioMode('hw');
+        startHwAudio();
+    }
+}
+
+function stopAudioSource() {
+    if (hwAudioActive) stopHwAudio();
+    stopAudio();
+    setAudioMode(null);
+}
+
+// Wire the unified audio picker. HW is special: clicking opens a device menu
+// rather than activating immediately; picking a device from the menu activates.
+document.querySelectorAll('.audio-mode-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        if (btn.dataset.mode === 'hw') {
+            e.stopPropagation();
+            toggleHwMenu();
+        } else {
+            switchAudioSource(btn.dataset.mode);
+        }
+    });
+});
+const audioStopBtn = document.getElementById('audio-stop-btn');
+if (audioStopBtn) audioStopBtn.addEventListener('click', stopAudioSource);
 
 // Bluetooth button listeners
 document.getElementById('bt-scan-btn').addEventListener('click', btScan);

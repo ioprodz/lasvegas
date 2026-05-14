@@ -1,5 +1,6 @@
 use crate::hardware::calibration::Calibration;
 use crate::hardware::network::{ApConfig, EthConfig, KnownWifi};
+use crate::hardware::shortcuts::Shortcuts;
 
 /// Extended audio analysis sent from the browser.
 #[derive(Debug, Clone)]
@@ -41,6 +42,8 @@ pub enum Command {
     SetCalibration(Calibration),
     SaveCalibration,
     GetCalibration,
+    SetShortcuts(Shortcuts),
+    GetShortcuts,
     ListAudioDevices,
     StartHardwareAudio { device_id: String },
     StopHardwareAudio,
@@ -69,6 +72,8 @@ pub enum StateUpdate {
     LedState(Vec<u8>),
     /// Calibration data as JSON string
     CalibrationData(String),
+    /// Shortcut slot mapping as CSV string (9 fields)
+    ShortcutsData(String),
     /// JSON array of available hardware audio input devices
     AudioDeviceList(String),
     /// Hardware audio analysis data to stream back to browser for visualization

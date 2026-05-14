@@ -1,9 +1,25 @@
-// Frequency visualizer, instrument detection, BPM tracking
+// Frequency visualizer, instrument detection, BPM tracking.
+// Band colors are pulled from CSS custom properties so the palette stays
+// in sync with the theme.
 const bandLabels = ['Sub', 'Bass', 'Low', 'Mid', 'UMid', 'Pres', 'Bril', 'Treb'];
-const bandColors = [
-    '#ff0000', '#ff4400', '#ff8800', '#44ff00',
-    '#00ffaa', '#0088ff', '#4400ff', '#aa00ff'
-];
+
+function getCssColor(name, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+}
+
+let bandColors = [];
+function refreshBandColors() {
+    // Map low→high across magenta→amber→cyan, with red at the bass end.
+    const red = getCssColor('--neon-red', '#ff4d6d');
+    const amber = getCssColor('--neon-amber', '#ffcc33');
+    const green = getCssColor('--neon-green', '#34d399');
+    const cyan = getCssColor('--neon-cyan', '#00e6ff');
+    const violet = getCssColor('--neon-violet', '#b56bff');
+    const magenta = getCssColor('--neon-magenta', '#ff2bd6');
+    bandColors = [red, '#ff7a3d', amber, green, '#00d3aa', cyan, violet, magenta];
+}
+refreshBandColors();
 
 const prevBands = new Float32Array(8);
 let prevBassVal = 0;
@@ -18,31 +34,47 @@ let indKick = 0, indSnare = 0, indHihat = 0;
 let indVocals = 0, indBassLine = 0;
 let spectralFlux = 0;
 
+let _freqCanvasResizer = null;
+function ensureCanvasObserver() {
+    if (_freqCanvasResizer) return;
+    const c = document.getElementById('freq-canvas');
+    if (!c) return;
+    _freqCanvasResizer = new ResizeObserver(() => { /* canvas re-resizes inside drawVisualizer */ });
+    _freqCanvasResizer.observe(c);
+}
+
 function drawVisualizer(bands) {
     const canvas = document.getElementById('freq-canvas');
+    if (!canvas) return;
+    ensureCanvasObserver();
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * devicePixelRatio;
-    canvas.height = rect.height * devicePixelRatio;
-    ctx.scale(devicePixelRatio, devicePixelRatio);
+    if (rect.width === 0 || rect.height === 0) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const w = rect.width;
     const h = rect.height;
     ctx.clearRect(0, 0, w, h);
 
-    const barW = (w - 20) / 8;
+    const barW = (w - 16) / 8;
     const gap = 3;
 
     for (let i = 0; i < 8; i++) {
-        const x = 10 + i * barW;
+        const x = 8 + i * barW;
         const barH = (bands[i] / 255) * (h - 22);
         ctx.fillStyle = bandColors[i];
         ctx.globalAlpha = 0.85;
         ctx.beginPath();
-        ctx.roundRect(x + gap/2, h - 18 - barH, barW - gap, barH, 2);
+        if (ctx.roundRect) ctx.roundRect(x + gap/2, h - 18 - barH, barW - gap, barH, 2);
+        else ctx.rect(x + gap/2, h - 18 - barH, barW - gap, barH);
         ctx.fill();
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#555';
-        ctx.font = '9px system-ui';
+        ctx.fillStyle = getCssColor('--text-dim', '#5a5a78');
+        ctx.font = '9px ui-sans-serif, system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(bandLabels[i], x + barW/2, h - 4);
     }
@@ -126,36 +158,44 @@ function drawVisualizer(bands) {
         beatPhase = ((now - lastOnsetTime) % beatInterval) / beatInterval;
     }
 
-    // Render stats
+    // Stats panel
     const bar = (val, color) => {
         const w = Math.round(val * 100);
-        return `<span style="display:inline-block;width:${w}%;max-width:80px;height:6px;background:${color};border-radius:2px;vertical-align:middle;"></span>`;
+        return `<span style="display:inline-block;width:${w}%;max-width:80px;height:6px;background:${color};border-radius:2px;vertical-align:middle;box-shadow:0 0 4px ${color}55"></span>`;
     };
 
     const el = document.getElementById('freq-stats');
+    if (!el) return;
+    const label = getCssColor('--label', '#7a7a98');
+    const text = getCssColor('--text', '#f5f5fa');
+    const cyan = getCssColor('--neon-cyan', '#00e6ff');
+    const amber = getCssColor('--neon-amber', '#ffcc33');
+    const red = getCssColor('--neon-red', '#ff4d6d');
+    const green = getCssColor('--neon-green', '#34d399');
+    const magenta = getCssColor('--neon-magenta', '#ff2bd6');
     el.innerHTML =
-        `<span style="color:#888;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em">Spectrum</span><br>` +
-        `<span style="color:#e0e0e0">Centroid</span> ${centroid.toFixed(2)}` +
-        ` <span style="color:#e0e0e0">Spread</span> ${spread.toFixed(2)}<br>` +
-        `<span style="color:#e0e0e0">Dominant</span> ${dominant}` +
-        ` <span style="color:#e0e0e0">Flux</span> ${Math.round(spectralFlux)}<br>` +
-        `<span style="color:#ff6666">Bass</span> ${bassRatio.toFixed(0)}%` +
-        ` <span style="color:#44ff88">Mid</span> ${midRatio.toFixed(0)}%` +
-        ` <span style="color:#6688ff">High</span> ${highRatio.toFixed(0)}%<br>` +
+        `<span style="color:${label};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em">Spectrum</span><br>` +
+        `<span style="color:${text}">Centroid</span> ${centroid.toFixed(2)}` +
+        ` <span style="color:${text}">Spread</span> ${spread.toFixed(2)}<br>` +
+        `<span style="color:${text}">Dominant</span> ${dominant}` +
+        ` <span style="color:${text}">Flux</span> ${Math.round(spectralFlux)}<br>` +
+        `<span style="color:${red}">Bass</span> ${bassRatio.toFixed(0)}%` +
+        ` <span style="color:${green}">Mid</span> ${midRatio.toFixed(0)}%` +
+        ` <span style="color:${cyan}">High</span> ${highRatio.toFixed(0)}%<br>` +
         `<br>` +
-        `<span style="color:#888;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em">Tempo</span><br>` +
-        `<span style="color:#e0e0e0">BPM</span> ${estimatedBPM > 0 ? Math.round(estimatedBPM) : '\u2014'}` +
-        ` <span style="color:#e0e0e0">Phase</span> ${beatPhase.toFixed(2)}<br>` +
+        `<span style="color:${label};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em">Tempo</span><br>` +
+        `<span style="color:${text}">BPM</span> ${estimatedBPM > 0 ? Math.round(estimatedBPM) : '—'}` +
+        ` <span style="color:${text}">Phase</span> ${beatPhase.toFixed(2)}<br>` +
         `<br>` +
-        `<span style="color:#888;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em">Pitch</span><br>` +
-        `<span style="color:#fff;font-size:1.1rem;font-weight:600">${detectedNote}</span>` +
-        ` <span style="color:#888">${detectedFreq > 0 ? Math.round(detectedFreq) + 'Hz' : ''}</span><br>` +
-        `<span style="color:#e0e0e0">Chord</span> <span style="color:#ffcc44;font-weight:500">${detectedChord}</span><br>` +
+        `<span style="color:${label};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em">Pitch</span><br>` +
+        `<span style="color:${cyan};font-size:1.1rem;font-weight:600;text-shadow:0 0 8px ${cyan}55">${detectedNote}</span>` +
+        ` <span style="color:${label}">${detectedFreq > 0 ? Math.round(detectedFreq) + 'Hz' : ''}</span><br>` +
+        `<span style="color:${text}">Chord</span> <span style="color:${amber};font-weight:600;text-shadow:0 0 6px ${amber}55">${detectedChord}</span><br>` +
         `<br>` +
-        `<span style="color:#888;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em">Instruments</span><br>` +
-        `<span style="color:#ff4444">Kick</span>  ${bar(indKick, '#ff4444')}<br>` +
-        `<span style="color:#ffaa44">Snare</span> ${bar(indSnare, '#ffaa44')}<br>` +
-        `<span style="color:#ffff66">HiHat</span> ${bar(indHihat, '#ffff66')}<br>` +
-        `<span style="color:#44ddff">Vocal</span> ${bar(indVocals, '#44ddff')}<br>` +
-        `<span style="color:#ff66aa">Bass</span>  ${bar(indBassLine, '#ff66aa')}`;
+        `<span style="color:${label};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em">Instruments</span><br>` +
+        `<span style="color:${red}">Kick</span>  ${bar(indKick, red)}<br>` +
+        `<span style="color:${amber}">Snare</span> ${bar(indSnare, amber)}<br>` +
+        `<span style="color:#ffee66">HiHat</span> ${bar(indHihat, '#ffee66')}<br>` +
+        `<span style="color:${cyan}">Vocal</span> ${bar(indVocals, cyan)}<br>` +
+        `<span style="color:${magenta}">Bass</span>  ${bar(indBassLine, magenta)}`;
 }

@@ -111,12 +111,3 @@ document.getElementById('cal-reset-btn').addEventListener('click', () => {
     sendCalibration();
 });
 
-// Calibrate nav handler
-document.getElementById('nav-calibrate').addEventListener('click', () => {
-    showPage('calibrate');
-    history.pushState({ page: 'calibrate' }, '', '/calibrate');
-    navItems.forEach(n => n.classList.remove('active'));
-    document.getElementById('nav-calibrate').classList.add('active');
-    sidebar.classList.remove('open');
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send('get_calibration');
-});
