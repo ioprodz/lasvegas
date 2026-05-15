@@ -416,6 +416,7 @@ fn main() {
                 "audio_strobubble" => hardware::animation::audio_strobubble(strip, frame, &audio_analysis),
                 "audio_strobubble2" => hardware::animation::audio_strobubble2(strip, frame, &audio_analysis),
                 "audio_strobubble3" => hardware::animation::audio_strobubble3(strip, frame, &audio_analysis),
+                "audio_harmonic_rhythm" => hardware::animation::audio_harmonic_rhythm(strip, frame, &audio_analysis),
                 "pacman" => hardware::animation::pacman(strip, frame, &audio_analysis),
                 "retro_arcade" => hardware::animation::retro_arcade(strip, frame, &audio_analysis),
                 "game_of_life" => hardware::animation::game_of_life(strip, frame, &audio_analysis),
