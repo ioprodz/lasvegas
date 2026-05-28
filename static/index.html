@@ -595,6 +595,26 @@
         </div>
     </div>
 
+    <!-- Mobile: long-press an animation to assign it to a slot -->
+    <div class="slot-sheet-overlay" id="slot-sheet-overlay" hidden>
+        <div class="slot-sheet" role="dialog" aria-modal="true" aria-labelledby="slot-sheet-title">
+            <div class="slot-sheet-grip" aria-hidden="true"></div>
+            <div class="slot-sheet-head">
+                <span class="hw-led magenta on" aria-hidden="true"></span>
+                <h3 id="slot-sheet-title">Animation</h3>
+            </div>
+            <button class="hw-button tone-primary slot-sheet-play" id="slot-sheet-play" type="button">
+                <span aria-hidden="true">&#9654;</span> Play now
+            </button>
+            <div class="hw-label slot-sheet-label">Assign to slot</div>
+            <div class="slot-sheet-grid" id="slot-sheet-grid"></div>
+            <button class="hw-button tone-stop slot-sheet-remove" id="slot-sheet-remove" type="button" hidden>
+                Remove from slot
+            </button>
+            <button class="hw-button tone-ghost slot-sheet-cancel" id="slot-sheet-cancel" type="button">Cancel</button>
+        </div>
+    </div>
+
     <script src="/js/websocket.js"></script>
     <script src="/js/led-preview.js"></script>
     <script src="/js/topbar.js"></script>

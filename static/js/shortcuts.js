@@ -90,120 +90,145 @@
         return slotEls.map(s => s.querySelector('.anim-card'));
     };
 
-    // ── Drag and drop (pointer-based, works on touch and desktop) ────────
+    // ── Assigning animations to slots ────────────────────────────────────
     //
-    // Mouse:  press and move past a small threshold starts the drag.
-    // Touch:  a short long-press *arms* the drag — this leaves plain finger
-    //         swipes free to scroll the (often long) animation list. Once
-    //         armed, the pointer is captured and dragging near the top/bottom
-    //         edge auto-scrolls the page so off-screen slots are reachable.
+    // Desktop (mouse): drag a card onto a slot — the familiar DnD.
+    // Touch (phones/tablets): tap a card to play it; long-press to open a
+    //   bottom sheet that assigns it to a slot via a mini 3×3 grid. Dragging
+    //   on touch is too fiddly, so it's disabled there — plain swipes scroll
+    //   the (long) animation list as normal.
 
-    const scrollContainer = document.querySelector('.content');
+    // ── Bottom sheet (touch assign) ──────────────────────────────────────
+    const sheetOverlay = document.getElementById('slot-sheet-overlay');
+    const sheetGrid    = document.getElementById('slot-sheet-grid');
+    const sheetTitle   = document.getElementById('slot-sheet-title');
+    const sheetPlay    = document.getElementById('slot-sheet-play');
+    const sheetRemove  = document.getElementById('slot-sheet-remove');
+    const sheetCancel  = document.getElementById('slot-sheet-cancel');
+    let sheetCard = null;
+    let sheetCloseTimer = null;
 
+    function cardLabel(card) {
+        const h = card.querySelector('h3');
+        return h ? h.textContent.trim() : card.dataset.anim;
+    }
+    function cardSlotIndex(card) {
+        const p = card.parentElement;
+        return p && p.classList.contains('shortcut-slot') ? parseInt(p.dataset.slot, 10) : -1;
+    }
+
+    function openSlotSheet(card) {
+        if (!sheetOverlay) return;
+        sheetCard = card;
+        sheetTitle.textContent = cardLabel(card);
+
+        // Rebuild the mini grid from the live slot contents each time.
+        sheetGrid.innerHTML = '';
+        slotEls.forEach((slot, idx) => {
+            const occupant = slot.querySelector('.anim-card');
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'slot-sheet-cell';
+            if (occupant === card) cell.classList.add('current');
+            else if (!occupant) cell.classList.add('empty');
+
+            const num = document.createElement('span');
+            num.className = 'slot-sheet-cell-num';
+            num.textContent = String(idx + 1);
+            const name = document.createElement('span');
+            name.className = 'slot-sheet-cell-name';
+            name.textContent = occupant ? cardLabel(occupant) : '—';
+            cell.append(num, name);
+
+            cell.addEventListener('click', () => {
+                if (occupant !== card) handleDrop(card, slot);
+                closeSlotSheet();
+            });
+            sheetGrid.appendChild(cell);
+        });
+
+        // Offer removal only when this card is already in a slot.
+        const cur = cardSlotIndex(card);
+        if (cur >= 0) {
+            sheetRemove.hidden = false;
+            sheetRemove.textContent = 'Remove from slot ' + (cur + 1);
+        } else {
+            sheetRemove.hidden = true;
+        }
+
+        if (sheetCloseTimer) { clearTimeout(sheetCloseTimer); sheetCloseTimer = null; }
+        sheetOverlay.hidden = false;
+        requestAnimationFrame(() => sheetOverlay.classList.add('open'));
+    }
+
+    function closeSlotSheet() {
+        if (!sheetOverlay) return;
+        sheetOverlay.classList.remove('open');
+        sheetCard = null;
+        sheetCloseTimer = setTimeout(() => { sheetOverlay.hidden = true; }, 220);
+    }
+
+    if (sheetOverlay) {
+        sheetPlay.addEventListener('click', () => {
+            const c = sheetCard;
+            closeSlotSheet();
+            if (c) c.click();            // reuse the normal play handler
+        });
+        sheetRemove.addEventListener('click', () => {
+            const c = sheetCard;
+            if (c) handleDrop(c, list);  // move back to the library
+            closeSlotSheet();
+        });
+        sheetCancel.addEventListener('click', closeSlotSheet);
+        // Close on a backdrop tap that both starts and ends on the backdrop,
+        // so the click trailing the opening long-press can't dismiss it.
+        let downOnBackdrop = false;
+        sheetOverlay.addEventListener('pointerdown', (e) => { downOnBackdrop = (e.target === sheetOverlay); });
+        sheetOverlay.addEventListener('click', (e) => {
+            if (e.target === sheetOverlay && downOnBackdrop) closeSlotSheet();
+        });
+    }
+
+    // Swallow the single click that fires right after the opening long-press
+    // so it doesn't fall through to the sheet or replay the animation.
+    function swallowNextClick() {
+        const cleanup = () => {
+            document.removeEventListener('click', handler, true);
+            clearTimeout(safety);
+        };
+        const handler = (e) => { e.stopPropagation(); e.preventDefault(); cleanup(); };
+        const safety = setTimeout(cleanup, 500);
+        document.addEventListener('click', handler, true);
+    }
+
+    // ── Pointer drag (mouse) + long-press (touch) ────────────────────────
     let dragging = null;          // the source card element
-    let dragGhost = null;         // floating clone following the pointer
+    let dragGhost = null;         // floating clone following the pointer (mouse)
     let dragOffsetX = 0;
     let dragOffsetY = 0;
     let dragStartX = 0;
     let dragStartY = 0;
-    let dragStarted = false;       // true once the drag is actually armed
+    let dragStarted = false;
     let suppressNextClick = false;
-    let dragPointerId = null;
     let dragPointerType = 'mouse';
-    let lastClientX = 0;
-    let lastClientY = 0;
     let longPressTimer = null;
-    let autoScrollRAF = null;
+    let longPressFired = false;
     const DRAG_THRESHOLD = 6;      // mouse: px before a drag begins
     const TOUCH_SLOP = 10;         // touch: movement that counts as a scroll, not a hold
-    const LONG_PRESS_MS = 240;     // touch: hold duration that arms a drag
-    const EDGE = 64;               // auto-scroll trigger zone near top/bottom
-    const EDGE_SPEED = 16;         // max auto-scroll px per frame
+    const LONG_PRESS_MS = 300;     // touch: hold duration that opens the sheet
+
+    const isTouch = (t) => t === 'touch' || t === 'pen';
 
     function clearLongPress() {
         if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
     }
 
-    function buildGhost() {
-        const r = dragging.getBoundingClientRect();
-        dragGhost = dragging.cloneNode(true);
-        dragGhost.classList.add('drag-ghost');
-        dragGhost.style.position = 'fixed';
-        dragGhost.style.left = r.left + 'px';
-        dragGhost.style.top = r.top + 'px';
-        dragGhost.style.width = r.width + 'px';
-        dragGhost.style.margin = '0';
-        dragGhost.style.pointerEvents = 'none';
-        dragGhost.style.zIndex = '1000';
-        dragGhost.style.opacity = '0.9';
-        dragGhost.style.transform = 'scale(0.96)';
-        dragGhost.style.boxShadow = '0 12px 32px rgba(0,0,0,0.6), 0 0 18px var(--neon-magenta-glow)';
-        document.body.appendChild(dragGhost);
-        dragging.classList.add('dragging');
-    }
-
-    function moveGhost() {
-        if (!dragGhost) return;
-        dragGhost.style.left = (lastClientX - dragOffsetX) + 'px';
-        dragGhost.style.top = (lastClientY - dragOffsetY) + 'px';
-    }
-
-    function highlightTarget() {
-        const target = dropTargetFromPoint(lastClientX, lastClientY);
-        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-        if (target) target.classList.add('drop-target');
-    }
-
-    // Arm the drag: capture the pointer and show the floating ghost.
-    function armDrag() {
-        if (!dragging || dragStarted) return;
-        clearLongPress();
-        dragStarted = true;
-        try { dragging.setPointerCapture(dragPointerId); } catch (_) {}
-        buildGhost();
-        moveGhost();
-        highlightTarget();
-        if (dragPointerType === 'touch' && navigator.vibrate) {
-            try { navigator.vibrate(12); } catch (_) {}
-        }
-    }
-
-    // Auto-scroll the page while a drag hovers near the top/bottom edge.
-    function autoScrollTick() {
-        autoScrollRAF = null;
-        if (!dragStarted || !scrollContainer) return;
-        const rect = scrollContainer.getBoundingClientRect();
-        let dv = 0;
-        if (lastClientY < rect.top + EDGE) {
-            dv = -EDGE_SPEED * ((rect.top + EDGE - lastClientY) / EDGE);
-        } else if (lastClientY > rect.bottom - EDGE) {
-            dv = EDGE_SPEED * ((lastClientY - (rect.bottom - EDGE)) / EDGE);
-        }
-        if (dv !== 0) {
-            scrollContainer.scrollTop += dv;
-            highlightTarget();
-            autoScrollRAF = requestAnimationFrame(autoScrollTick);
-        }
-    }
-    function maybeAutoScroll() {
-        if (autoScrollRAF === null) autoScrollRAF = requestAnimationFrame(autoScrollTick);
-    }
-    function stopAutoScroll() {
-        if (autoScrollRAF !== null) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
-    }
-
-    // Fully abandon the current gesture without performing a drop (e.g. a touch
-    // that turned into a scroll).
-    function resetDrag() {
-        clearLongPress();
-        stopAutoScroll();
-        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-        if (dragGhost && dragGhost.parentElement) dragGhost.parentElement.removeChild(dragGhost);
-        dragGhost = null;
-        if (dragging) dragging.classList.remove('dragging');
-        dragging = null;
-        dragStarted = false;
-        dragPointerId = null;
+    // Touch hold completed: mark it armed (sheet opens on release) + nudge.
+    function onLongPress() {
+        longPressTimer = null;
+        longPressFired = true;
+        if (dragging) dragging.classList.add('longpress-armed');
+        if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
     }
 
     function pointerDown(e) {
@@ -211,73 +236,107 @@
         const card = e.currentTarget;
         dragging = card;
         dragStarted = false;
-        dragPointerId = e.pointerId;
+        longPressFired = false;
         dragPointerType = e.pointerType || 'mouse';
         const r = card.getBoundingClientRect();
         dragOffsetX = e.clientX - r.left;
         dragOffsetY = e.clientY - r.top;
-        dragStartX = lastClientX = e.clientX;
-        dragStartY = lastClientY = e.clientY;
-        if (dragPointerType === 'touch' || dragPointerType === 'pen') {
-            // Don't capture yet — let the list scroll. A held finger arms the drag.
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        if (isTouch(dragPointerType)) {
+            // Don't capture — leave the list free to scroll. A held finger
+            // opens the assign sheet on release.
             clearLongPress();
-            longPressTimer = setTimeout(armDrag, LONG_PRESS_MS);
+            longPressTimer = setTimeout(onLongPress, LONG_PRESS_MS);
         } else {
-            // Mouse: capture immediately; the move threshold decides if it's a drag.
             try { card.setPointerCapture(e.pointerId); } catch (_) {}
         }
     }
 
     function pointerMove(e) {
         if (!dragging) return;
-        lastClientX = e.clientX;
-        lastClientY = e.clientY;
         const dx = e.clientX - dragStartX;
         const dy = e.clientY - dragStartY;
 
-        if (!dragStarted) {
-            if (dragPointerType === 'touch' || dragPointerType === 'pen') {
-                // Movement before the hold fires = the user is scrolling. Bail.
-                if (Math.hypot(dx, dy) > TOUCH_SLOP) resetDrag();
-                return;
+        if (isTouch(dragPointerType)) {
+            // Movement before the hold completes = a scroll — let it go.
+            if (!longPressFired && Math.hypot(dx, dy) > TOUCH_SLOP) {
+                clearLongPress();
+                dragging.classList.remove('longpress-armed');
+                dragging = null;
             }
-            // Mouse: begin the drag once past the threshold.
-            if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-            armDrag();
+            return;   // never drag on touch
         }
 
-        e.preventDefault();
-        moveGhost();
-        highlightTarget();
-        maybeAutoScroll();
+        // Mouse drag.
+        if (!dragStarted) {
+            if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+            dragStarted = true;
+            const r = dragging.getBoundingClientRect();
+            dragGhost = dragging.cloneNode(true);
+            dragGhost.classList.add('drag-ghost');
+            dragGhost.style.position = 'fixed';
+            dragGhost.style.left = r.left + 'px';
+            dragGhost.style.top = r.top + 'px';
+            dragGhost.style.width = r.width + 'px';
+            dragGhost.style.margin = '0';
+            dragGhost.style.pointerEvents = 'none';
+            dragGhost.style.zIndex = '1000';
+            dragGhost.style.opacity = '0.9';
+            dragGhost.style.transform = 'scale(0.96)';
+            dragGhost.style.boxShadow = '0 12px 32px rgba(0,0,0,0.6), 0 0 18px var(--neon-magenta-glow)';
+            document.body.appendChild(dragGhost);
+            dragging.classList.add('dragging');
+        }
+        dragGhost.style.left = (e.clientX - dragOffsetX) + 'px';
+        dragGhost.style.top = (e.clientY - dragOffsetY) + 'px';
+        const target = dropTargetFromPoint(e.clientX, e.clientY);
+        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        if (target) target.classList.add('drop-target');
     }
 
     function pointerUp(e) {
         clearLongPress();
-        stopAutoScroll();
         if (!dragging) return;
         const card = dragging;
+
+        if (isTouch(dragPointerType)) {
+            card.classList.remove('longpress-armed');
+            if (longPressFired) {
+                openSlotSheet(card);
+                swallowNextClick();
+            }
+            dragging = null;
+            longPressFired = false;
+            return;
+        }
+
+        // Mouse drop.
         const wasDragging = dragStarted;
         try { card.releasePointerCapture(e.pointerId); } catch (_) {}
         if (wasDragging) {
             const target = dropTargetFromPoint(e.clientX, e.clientY);
             handleDrop(card, target);
             suppressNextClick = true;
-            // Click event will fire right after — clear flag after a tick.
             setTimeout(() => { suppressNextClick = false; }, 50);
         }
-        // Cleanup
         document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
         if (dragGhost && dragGhost.parentElement) dragGhost.parentElement.removeChild(dragGhost);
         dragGhost = null;
         card.classList.remove('dragging');
         dragging = null;
         dragStarted = false;
-        dragPointerId = null;
     }
 
     function pointerCancel() {
-        resetDrag();
+        clearLongPress();
+        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        if (dragGhost && dragGhost.parentElement) dragGhost.parentElement.removeChild(dragGhost);
+        dragGhost = null;
+        if (dragging) dragging.classList.remove('dragging', 'longpress-armed');
+        dragging = null;
+        dragStarted = false;
+        longPressFired = false;
     }
 
     function dropTargetFromPoint(x, y) {
@@ -333,6 +392,8 @@
         card.addEventListener('pointermove', pointerMove);
         card.addEventListener('pointerup', pointerUp);
         card.addEventListener('pointercancel', pointerCancel);
+        // Suppress the OS context menu / text-callout on a long press.
+        card.addEventListener('contextmenu', (e) => e.preventDefault());
         card.addEventListener('click', (e) => {
             if (suppressNextClick) {
                 suppressNextClick = false;

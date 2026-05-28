@@ -184,6 +184,9 @@
     text-align: left;
     color: inherit;
     font-family: inherit;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 .anim-card:hover {
     border-color: var(--border-strong);
@@ -235,6 +238,12 @@
 .anim-card.running .anim-led {
     background: var(--neon-magenta);
     box-shadow: 0 0 8px var(--neon-magenta-glow);
+}
+/* Touch: a completed long-press arms the assign sheet (opens on release). */
+.anim-card.longpress-armed {
+    border-color: var(--neon-magenta);
+    box-shadow: var(--shadow-inset), 0 0 14px var(--neon-magenta-glow);
+    transform: scale(0.97);
 }
 /* Card inside a shortcut slot — compact */
 .shortcut-slot .anim-card p { display: none; }
@@ -386,6 +395,100 @@
     font-size: 0.85rem;
     text-align: center;
 }
+
+/* --- Assign-to-slot bottom sheet (touch) --- */
+.slot-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 210;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+.slot-sheet-overlay[hidden] { display: none; }
+.slot-sheet-overlay.open { opacity: 1; }
+.slot-sheet {
+    width: 100%;
+    max-width: 520px;
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    border: 1px solid var(--border-strong);
+    border-bottom: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.6), 0 0 24px var(--neon-magenta-glow);
+    padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.slot-sheet-overlay.open .slot-sheet { transform: translateY(0); }
+.slot-sheet-grip {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    margin: 0.2rem auto 0.7rem;
+}
+.slot-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+}
+.slot-sheet-head h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.slot-sheet-play { width: 100%; margin-bottom: 0.9rem; }
+.slot-sheet-label { margin-bottom: 0.5rem; }
+.slot-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+}
+.slot-sheet-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.35rem;
+    min-height: 62px;
+    padding: 0.5rem 0.6rem;
+    background: var(--bg-screen);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.slot-sheet-cell:active { transform: translateY(1px); }
+.slot-sheet-cell-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 6px var(--neon-cyan-glow);
+}
+.slot-sheet-cell-name {
+    font-size: 0.78rem;
+    line-height: 1.2;
+    color: var(--text);
+}
+.slot-sheet-cell.empty .slot-sheet-cell-name { color: var(--text-dim); }
+.slot-sheet-cell.current {
+    border-color: var(--neon-magenta);
+    background: color-mix(in srgb, var(--neon-magenta) 8%, var(--bg-screen));
+    box-shadow: 0 0 12px var(--neon-magenta-glow);
+}
+.slot-sheet-cell.current .slot-sheet-cell-num { color: var(--neon-magenta); text-shadow: 0 0 6px var(--neon-magenta-glow); }
+.slot-sheet-remove { width: 100%; margin-bottom: 0.5rem; }
+.slot-sheet-cancel { width: 100%; }
 
 /* ============ Calibrate page ============ */
 .cal-color-test {
