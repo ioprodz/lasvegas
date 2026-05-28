@@ -91,6 +91,14 @@
     };
 
     // ── Drag and drop (pointer-based, works on touch and desktop) ────────
+    //
+    // Mouse:  press and move past a small threshold starts the drag.
+    // Touch:  a short long-press *arms* the drag — this leaves plain finger
+    //         swipes free to scroll the (often long) animation list. Once
+    //         armed, the pointer is captured and dragging near the top/bottom
+    //         edge auto-scrolls the page so off-screen slots are reachable.
+
+    const scrollContainer = document.querySelector('.content');
 
     let dragging = null;          // the source card element
     let dragGhost = null;         // floating clone following the pointer
@@ -98,57 +106,155 @@
     let dragOffsetY = 0;
     let dragStartX = 0;
     let dragStartY = 0;
-    let dragStarted = false;
+    let dragStarted = false;       // true once the drag is actually armed
     let suppressNextClick = false;
-    const DRAG_THRESHOLD = 6;
+    let dragPointerId = null;
+    let dragPointerType = 'mouse';
+    let lastClientX = 0;
+    let lastClientY = 0;
+    let longPressTimer = null;
+    let autoScrollRAF = null;
+    const DRAG_THRESHOLD = 6;      // mouse: px before a drag begins
+    const TOUCH_SLOP = 10;         // touch: movement that counts as a scroll, not a hold
+    const LONG_PRESS_MS = 240;     // touch: hold duration that arms a drag
+    const EDGE = 64;               // auto-scroll trigger zone near top/bottom
+    const EDGE_SPEED = 16;         // max auto-scroll px per frame
+
+    function clearLongPress() {
+        if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+    }
+
+    function buildGhost() {
+        const r = dragging.getBoundingClientRect();
+        dragGhost = dragging.cloneNode(true);
+        dragGhost.classList.add('drag-ghost');
+        dragGhost.style.position = 'fixed';
+        dragGhost.style.left = r.left + 'px';
+        dragGhost.style.top = r.top + 'px';
+        dragGhost.style.width = r.width + 'px';
+        dragGhost.style.margin = '0';
+        dragGhost.style.pointerEvents = 'none';
+        dragGhost.style.zIndex = '1000';
+        dragGhost.style.opacity = '0.9';
+        dragGhost.style.transform = 'scale(0.96)';
+        dragGhost.style.boxShadow = '0 12px 32px rgba(0,0,0,0.6), 0 0 18px var(--neon-magenta-glow)';
+        document.body.appendChild(dragGhost);
+        dragging.classList.add('dragging');
+    }
+
+    function moveGhost() {
+        if (!dragGhost) return;
+        dragGhost.style.left = (lastClientX - dragOffsetX) + 'px';
+        dragGhost.style.top = (lastClientY - dragOffsetY) + 'px';
+    }
+
+    function highlightTarget() {
+        const target = dropTargetFromPoint(lastClientX, lastClientY);
+        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        if (target) target.classList.add('drop-target');
+    }
+
+    // Arm the drag: capture the pointer and show the floating ghost.
+    function armDrag() {
+        if (!dragging || dragStarted) return;
+        clearLongPress();
+        dragStarted = true;
+        try { dragging.setPointerCapture(dragPointerId); } catch (_) {}
+        buildGhost();
+        moveGhost();
+        highlightTarget();
+        if (dragPointerType === 'touch' && navigator.vibrate) {
+            try { navigator.vibrate(12); } catch (_) {}
+        }
+    }
+
+    // Auto-scroll the page while a drag hovers near the top/bottom edge.
+    function autoScrollTick() {
+        autoScrollRAF = null;
+        if (!dragStarted || !scrollContainer) return;
+        const rect = scrollContainer.getBoundingClientRect();
+        let dv = 0;
+        if (lastClientY < rect.top + EDGE) {
+            dv = -EDGE_SPEED * ((rect.top + EDGE - lastClientY) / EDGE);
+        } else if (lastClientY > rect.bottom - EDGE) {
+            dv = EDGE_SPEED * ((lastClientY - (rect.bottom - EDGE)) / EDGE);
+        }
+        if (dv !== 0) {
+            scrollContainer.scrollTop += dv;
+            highlightTarget();
+            autoScrollRAF = requestAnimationFrame(autoScrollTick);
+        }
+    }
+    function maybeAutoScroll() {
+        if (autoScrollRAF === null) autoScrollRAF = requestAnimationFrame(autoScrollTick);
+    }
+    function stopAutoScroll() {
+        if (autoScrollRAF !== null) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
+    }
+
+    // Fully abandon the current gesture without performing a drop (e.g. a touch
+    // that turned into a scroll).
+    function resetDrag() {
+        clearLongPress();
+        stopAutoScroll();
+        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        if (dragGhost && dragGhost.parentElement) dragGhost.parentElement.removeChild(dragGhost);
+        dragGhost = null;
+        if (dragging) dragging.classList.remove('dragging');
+        dragging = null;
+        dragStarted = false;
+        dragPointerId = null;
+    }
 
     function pointerDown(e) {
         if (e.button !== undefined && e.button !== 0) return;
         const card = e.currentTarget;
         dragging = card;
         dragStarted = false;
+        dragPointerId = e.pointerId;
+        dragPointerType = e.pointerType || 'mouse';
         const r = card.getBoundingClientRect();
         dragOffsetX = e.clientX - r.left;
         dragOffsetY = e.clientY - r.top;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-        card.setPointerCapture(e.pointerId);
+        dragStartX = lastClientX = e.clientX;
+        dragStartY = lastClientY = e.clientY;
+        if (dragPointerType === 'touch' || dragPointerType === 'pen') {
+            // Don't capture yet — let the list scroll. A held finger arms the drag.
+            clearLongPress();
+            longPressTimer = setTimeout(armDrag, LONG_PRESS_MS);
+        } else {
+            // Mouse: capture immediately; the move threshold decides if it's a drag.
+            try { card.setPointerCapture(e.pointerId); } catch (_) {}
+        }
     }
 
     function pointerMove(e) {
         if (!dragging) return;
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
         const dx = e.clientX - dragStartX;
         const dy = e.clientY - dragStartY;
-        if (!dragStarted && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+
         if (!dragStarted) {
-            dragStarted = true;
-            // Build floating ghost
-            const r = dragging.getBoundingClientRect();
-            dragGhost = dragging.cloneNode(true);
-            dragGhost.classList.add('drag-ghost');
-            dragGhost.style.position = 'fixed';
-            dragGhost.style.left = r.left + 'px';
-            dragGhost.style.top = r.top + 'px';
-            dragGhost.style.width = r.width + 'px';
-            dragGhost.style.pointerEvents = 'none';
-            dragGhost.style.zIndex = '1000';
-            dragGhost.style.opacity = '0.85';
-            dragGhost.style.transform = 'scale(0.96)';
-            dragGhost.style.boxShadow = '0 12px 32px rgba(0,0,0,0.6), 0 0 18px var(--neon-magenta-glow)';
-            document.body.appendChild(dragGhost);
-            dragging.classList.add('dragging');
+            if (dragPointerType === 'touch' || dragPointerType === 'pen') {
+                // Movement before the hold fires = the user is scrolling. Bail.
+                if (Math.hypot(dx, dy) > TOUCH_SLOP) resetDrag();
+                return;
+            }
+            // Mouse: begin the drag once past the threshold.
+            if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+            armDrag();
         }
-        if (dragGhost) {
-            dragGhost.style.left = (e.clientX - dragOffsetX) + 'px';
-            dragGhost.style.top = (e.clientY - dragOffsetY) + 'px';
-        }
-        // Highlight drop target under pointer
-        const target = dropTargetFromPoint(e.clientX, e.clientY);
-        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-        if (target) target.classList.add('drop-target');
+
+        e.preventDefault();
+        moveGhost();
+        highlightTarget();
+        maybeAutoScroll();
     }
 
     function pointerUp(e) {
+        clearLongPress();
+        stopAutoScroll();
         if (!dragging) return;
         const card = dragging;
         const wasDragging = dragStarted;
@@ -167,10 +273,11 @@
         card.classList.remove('dragging');
         dragging = null;
         dragStarted = false;
+        dragPointerId = null;
     }
 
-    function pointerCancel(e) {
-        pointerUp(e);
+    function pointerCancel() {
+        resetDrag();
     }
 
     function dropTargetFromPoint(x, y) {

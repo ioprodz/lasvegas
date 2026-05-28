@@ -237,10 +237,12 @@ body[data-page="performance"] .content {
             "topbar"
             "main";
     }
-    .topbar { padding: 0 0.6rem; }
-    .topbar-brand { font-size: 0.85rem; }
+    .topbar { padding: 0 0.6rem; gap: 0.4rem; }
+    .topbar-brand { font-size: 0.85rem; flex-shrink: 0; }
     .topbar-brand .brand-dot { width: 8px; height: 8px; }
-    .hamburger { display: inline-flex; }
+    /* Let the status chip shrink and ellipsis instead of shoving the row wider. */
+    .hw-chip { min-width: 0; flex-shrink: 1; max-width: 40vw; }
+    .hamburger { display: inline-flex; flex-shrink: 0; }
     .sidebar {
         position: fixed;
         top: 0;
@@ -259,6 +261,13 @@ body[data-page="performance"] .content {
     .led-grid { gap: 1px; }
 
     .mobile-hide { display: none !important; }
+}
+
+/* Very narrow phones: drop the brand wordmark (keep the dot) so the running
+   status chip and Stop button have room. */
+@media (max-width: 420px) {
+    .topbar-brand > span:not(.brand-dot) { display: none; }
+    .hw-chip { max-width: 32vw; }
 }
 
 /* Reduce motion */

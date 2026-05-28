@@ -46,15 +46,54 @@
     body[data-page="performance"] .content { overflow-y: auto; }
 }
 @media (max-width: 720px) {
-    .perf-cols {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto;
-        grid-template-areas:
-            "shortcuts"
-            "audio"
-            "library"
-            "signal";
+    /* On phones the fit-to-viewport dashboard collapses (flex:1 + min-height:0
+       panels overlap). Switch Performance to a plain, top-to-bottom scroll
+       flow: the page scrolls, panels size to their content, no nested scroll. */
+    body[data-page="performance"] .content {
+        display: block;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2rem;
     }
+    #page-performance.active { display: block; }
+
+    .perf-cols {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        flex: none;
+        min-height: 0;
+    }
+    /* Stacking order: shortcuts → audio → library → signal (flex source order). */
+    .perf-shortcuts { order: 1; }
+    .audio-picker   { order: 2; }
+    .perf-library   { order: 3; }
+    .perf-signal    { order: 4; }
+
+    /* Undo the desktop flex-fill constraints so each panel is content-sized. */
+    .perf-cols > .hw-panel { min-height: 0; }
+    .anim-list {
+        flex: none;
+        overflow: visible;
+        min-height: 0;
+        padding-right: 0;
+    }
+    .perf-signal,
+    .signal-pane { min-height: 0; }
+    .signal-pane { overflow: visible; flex: none; }
+
+    /* Roomier tap targets for browsing/playing animations by touch. */
+    .anim-card { padding: 0.85rem 0.95rem 0.8rem 1.1rem; }
+    .anim-card h3 { font-size: 0.95rem; }
+    .anim-card p { font-size: 0.8rem; }
+
+    /* Keep the 3×3 grid square-ish and tappable. */
+    .shortcut-grid { gap: 0.5rem; }
+    .shortcut-slot { min-height: 68px; }
+
+    /* Audio picker: stop control drops to its own full-width row. */
+    .audio-picker-modes { flex: 1 1 100%; }
+    #audio-stop-btn { flex: 1 1 100%; min-width: 0; }
 }
 
 /* --- Shortcut grid (3x3) --- */
