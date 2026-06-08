@@ -48,6 +48,17 @@ fn main() {
     let mut shortcuts = Shortcuts::load();
     println!("Loaded shortcuts: {}", shortcuts.to_csv());
 
+    // Load Art-Net config and create the UDP sender
+    let mut artnet_config = hardware::artnet::ArtNetConfig::load();
+    println!("Loaded Art-Net config: {:?}", artnet_config);
+    let mut artnet_sender = match hardware::artnet::ArtNetSender::new() {
+        Ok(s) => Some(s),
+        Err(e) => {
+            eprintln!("Art-Net socket init failed: {}", e);
+            None
+        }
+    };
+
     // Channels: commands from WebSocket, state updates to WebSocket
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
     let (state_tx, state_rx) = mpsc::channel::<StateUpdate>();
@@ -78,6 +89,7 @@ fn main() {
     // Main loop: owns the LED strip, runs animations
     let mut active_animation: Option<String> = None;
     let mut frame: usize = 0;
+    let mut artnet_frame: usize = 0;
     let mut audio_bands: [u8; 8] = [0; 8];
     let mut audio_analysis = AudioAnalysis::default();
     let frame_duration = Duration::from_millis(16); // ~60fps
@@ -388,6 +400,21 @@ fn main() {
                         let _ = tx.send(StateUpdate::NetStatus(hardware::network::status_json()));
                     });
                 }
+                Command::SetArtNet(cfg) => {
+                    artnet_config = cfg;
+                    // Demo mode owns the strip; stop any running animation.
+                    if artnet_config.demo {
+                        active_animation = None;
+                    }
+                    match artnet_config.save() {
+                        Ok(_) => println!("Art-Net config saved: {:?}", artnet_config),
+                        Err(e) => println!("Failed to save Art-Net config: {}", e),
+                    }
+                    let _ = state_tx.send(StateUpdate::ArtNetData(artnet_config.to_json()));
+                }
+                Command::GetArtNet => {
+                    let _ = state_tx.send(StateUpdate::ArtNetData(artnet_config.to_json()));
+                }
             }
         }
 
@@ -430,6 +457,35 @@ fn main() {
             if frame % 3 == 0 {
                 let state = strip.read_state();
                 let _ = state_tx.send(StateUpdate::LedState(state));
+            }
+        }
+
+        // Art-Net output (runs every frame, independent of animations)
+        if artnet_config.enabled {
+            artnet_frame = artnet_frame.wrapping_add(1);
+            // Choose the DMX source: rig (beat-synced movers, from audio) >
+            // demo (audio-independent test sweep) > mirror (current LED frame).
+            let dmx = if artnet_config.rig {
+                hardware::artnet::rig_to_dmx(&audio_analysis, artnet_frame)
+            } else if artnet_config.demo {
+                hardware::artnet::demo_pattern(strip, artnet_frame);
+                strip.render_calibrated(&calibration);
+                if artnet_frame % 3 == 0 {
+                    let _ = state_tx.send(StateUpdate::LedState(strip.read_state()));
+                }
+                hardware::artnet::frame_to_dmx(&strip.read_state())
+            } else {
+                hardware::artnet::frame_to_dmx(&strip.read_state())
+            };
+            if let Some(sender) = artnet_sender.as_mut() {
+                if let Err(e) = sender.send_dmx(
+                    &artnet_config.dest_ip,
+                    artnet_config.port,
+                    artnet_config.universe,
+                    &dmx,
+                ) {
+                    eprintln!("Art-Net send error: {}", e);
+                }
             }
         }
 

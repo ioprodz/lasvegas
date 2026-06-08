@@ -4,6 +4,7 @@ use std::net::TcpListener;
 use std::sync::mpsc;
 
 use crate::command::{AudioAnalysis, Command, StateUpdate};
+use crate::hardware::artnet::ArtNetConfig;
 use crate::hardware::calibration::Calibration;
 use crate::hardware::network;
 use crate::hardware::shortcuts::Shortcuts;
@@ -100,6 +101,12 @@ pub fn start(
                         responder.send(Message::Text(msg.clone()));
                     }
                 }
+                StateUpdate::ArtNetData(json) => {
+                    let msg = format!("artnet:{}", json);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
             }
         }
 
@@ -115,6 +122,8 @@ pub fn start(
                     let _ = cmd_tx.send(Command::GetShortcuts);
                     // Send a fresh network snapshot
                     let _ = cmd_tx.send(Command::NetList);
+                    // Send current Art-Net config
+                    let _ = cmd_tx.send(Command::GetArtNet);
                 }
                 Event::Disconnect(client_id) => {
                     println!("Client #{} disconnected", client_id);
@@ -199,6 +208,10 @@ fn parse_command(text: &str) -> Option<Command> {
         t.trim().parse().ok().map(|token| Command::NetStageConfirm { token })
     } else if let Some(t) = text.strip_prefix("net:stage:revert:") {
         t.trim().parse().ok().map(|token| Command::NetStageRevert { token })
+    } else if let Some(params) = text.strip_prefix("artnet:set:") {
+        ArtNetConfig::from_command(params).map(Command::SetArtNet)
+    } else if text == "get_artnet" {
+        Some(Command::GetArtNet)
     } else {
         None
     }

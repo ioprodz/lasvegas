@@ -58,6 +58,9 @@
             <button class="nav-item" data-page="bluetooth">
                 <span class="icon">&#127247;</span> Bluetooth
             </button>
+            <button class="nav-item" data-page="artnet">
+                <span class="icon">&#128161;</span> Art-Net
+            </button>
 
             <div class="sidebar-footer">
                 <span class="hw-led" id="conn-led" aria-hidden="true"></span>
@@ -566,6 +569,52 @@
                     </div>
                 </div>
 
+                <!-- ===== Art-Net ===== -->
+                <div id="page-artnet" class="page">
+                    <div class="content-header"><h2>Art-Net Output</h2></div>
+
+                    <div class="hw-panel">
+                        <div class="hw-label">DMX / Art-Net</div>
+                        <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 0.75rem;">
+                            Mirrors the current LED frame onto one DMX universe (60 RGB cells = channels 1&ndash;180)
+                            and transmits it as Art-Net to the destination below. Use Demo mode to send a moving
+                            test pattern without any audio input.
+                        </p>
+
+                        <div class="hw-field" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                            <input type="checkbox" id="artnet-enabled">
+                            <label for="artnet-enabled">Enable Art-Net output</label>
+                        </div>
+
+                        <div class="hw-field" style="margin-bottom:0.75rem;">
+                            <label>Destination IP</label>
+                            <input type="text" class="hw-input" id="artnet-dest-ip" placeholder="192.168.1.49">
+                        </div>
+
+                        <div class="hw-field" style="margin-bottom:0.75rem;">
+                            <label>Port</label>
+                            <input type="number" class="hw-input" id="artnet-port" min="1" max="65535" value="6454">
+                        </div>
+
+                        <div class="hw-field" style="margin-bottom:0.75rem;">
+                            <label>Universe</label>
+                            <input type="number" class="hw-input" id="artnet-universe" min="0" max="32767" value="0">
+                        </div>
+
+                        <div class="hw-field" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                            <input type="checkbox" id="artnet-demo">
+                            <label for="artnet-demo">Demo mode (moving test pattern, no audio)</label>
+                        </div>
+
+                        <div class="hw-field" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                            <input type="checkbox" id="artnet-rig">
+                            <label for="artnet-rig">Rig mode (beat-synced moving heads, driven by audio)</label>
+                        </div>
+
+                        <button class="hw-button tone-go" id="artnet-save-btn" type="button">Save &amp; Apply</button>
+                    </div>
+                </div>
+
             </div><!-- /.content -->
         </main>
 
@@ -630,6 +679,7 @@
     <script src="/js/keyboard.js"></script>
     <script src="/js/cheatsheet.js"></script>
     <script src="/js/shortcuts.js"></script>
+    <script src="/js/artnet.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html>

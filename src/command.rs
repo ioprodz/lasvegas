@@ -1,3 +1,4 @@
+use crate::hardware::artnet::ArtNetConfig;
 use crate::hardware::calibration::Calibration;
 use crate::hardware::network::{ApConfig, EthConfig, KnownWifi};
 use crate::hardware::shortcuts::Shortcuts;
@@ -63,6 +64,8 @@ pub enum Command {
     NetEthSet(EthConfig),
     NetStageConfirm { token: u32 },
     NetStageRevert { token: u32 },
+    SetArtNet(ArtNetConfig),
+    GetArtNet,
 }
 
 /// State updates sent from the main loop to WebSocket clients.
@@ -88,4 +91,6 @@ pub enum StateUpdate {
     NetStatus(String),
     /// Network operation result, e.g. "ap:set:ok", "wifi:scan:[json]", "stage:pending:<token>:<secs>"
     NetResult(String),
+    /// Art-Net config as JSON string
+    ArtNetData(String),
 }

@@ -35,6 +35,10 @@ function handleWsMessage(event) {
             handleNetStatus(event.data.slice('net:status:'.length));
         } else if (event.data.startsWith('net:result:')) {
             handleNetResult(event.data.slice('net:result:'.length));
+        } else if (event.data.startsWith('artnet:')) {
+            try {
+                applyArtNetFromServer(JSON.parse(event.data.slice('artnet:'.length)));
+            } catch(e) { console.error('Failed to parse artnet:', e); }
         }
     }
 }

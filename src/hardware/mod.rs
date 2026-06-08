@@ -1,4 +1,5 @@
 pub mod animation;
+pub mod artnet;
 pub mod audio;
 pub mod audio_analysis;
 pub mod bluetooth;
