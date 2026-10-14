@@ -5,8 +5,9 @@ Reads the raw mic stream that the LED server re-publishes on 127.0.0.1:8081
 Vosk (offline, small English model), and sends the matching command to the
 LED server's WebSocket (ws://127.0.0.1:8080).
 
-Every command starts with the wake word (default "voldemort"), e.g.
-"voldemort rainbow", "voldemort lights off", "voldemort red".
+Every command starts with the wake phrase (default "room light"), e.g.
+"room light rainbow", "room light off", "room light red". The wake phrase
+alone toggles the lights.
 """
 
 import base64
@@ -21,7 +22,7 @@ from vosk import KaldiRecognizer, Model, SetLogLevel
 TAP = ("127.0.0.1", 8081)
 WS = ("127.0.0.1", 8080)
 RATE = 44100
-WAKE = os.environ.get("EARS_WAKE", "voldemort")
+WAKE = os.environ.get("EARS_WAKE", "room light")
 MODEL_DIR = os.environ.get("EARS_MODEL", os.path.join(os.path.dirname(__file__), "model"))
 # Vosk word confidence (0–1) every word of a phrase must reach.
 MIN_CONF = float(os.environ.get("EARS_MIN_CONF", "0.6"))
@@ -70,7 +71,7 @@ def log(*args):
 
 
 def phrases():
-    return [f"{WAKE} {p}" for p in [*TEXT_COMMANDS, *ANIMATIONS, *COLORS]]
+    return [WAKE] + [f"{WAKE} {p}" for p in [*TEXT_COMMANDS, *ANIMATIONS, *COLORS]]
 
 
 def ws_send(payload):
@@ -107,6 +108,9 @@ def ws_send(payload):
 
 def handle(text):
     """Map a recognised phrase to a command. Returns a description or None."""
+    if text == WAKE:
+        ws_send("lights:toggle")
+        return "lights:toggle"
     if not text.startswith(WAKE + " "):
         return None
     what = text[len(WAKE) + 1:]

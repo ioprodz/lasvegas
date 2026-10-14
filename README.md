@@ -99,6 +99,7 @@ sudo ./target/release/lasvegas
 - **Audio tap**: while the mic is open, the raw stream (S16_LE, 44.1 kHz,
   mono) is re-published on `127.0.0.1:8081` for other programs on the Pi.
 - **Voice commands** (`ears/`): a separate Python service using Vosk offline
-  speech recognition with a fixed phrase list, all starting with "voldemort" (`EARS_WAKE`):
-  "voldemort lights on/off", "voldemort rainbow", "voldemort party mode", "voldemort red", …
+  speech recognition with a fixed phrase list, all starting with "room light" (`EARS_WAKE`):
+  "room light on/off", "room light rainbow", "room light party mode", "room light red", …;
+  "room light" alone toggles the lights
   (see `ears/ears.py`). Install or update with `./ears/install.sh <pi-host>`.
