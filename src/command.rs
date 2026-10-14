@@ -66,6 +66,15 @@ pub enum Command {
     NetStageRevert { token: u32 },
     SetArtNet(ArtNetConfig),
     GetArtNet,
+    /// Turn the lights back on with what was showing before they went off.
+    LightsOn,
+    LightsOff,
+    LightsToggle,
+    /// Detected by the hardware capture thread.
+    DoubleClap,
+    /// `listen:set:<clap>,<sensitivity>` (raw params, applied in the main loop)
+    SetListen(String),
+    GetListen,
 }
 
 /// State updates sent from the main loop to WebSocket clients.
@@ -93,4 +102,6 @@ pub enum StateUpdate {
     NetResult(String),
     /// Art-Net config as JSON string
     ArtNetData(String),
+    /// Listen (clap) config as JSON string
+    ListenData(String),
 }

@@ -4,6 +4,7 @@ mod web;
 
 use command::{AudioAnalysis, Command, StateUpdate};
 use hardware::calibration::Calibration;
+use hardware::listen::ListenConfig;
 use hardware::led::LedStrip;
 use hardware::shortcuts::Shortcuts;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -11,6 +12,12 @@ use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
+
+/// What the strip showed before it was switched off, so "lights on" can bring it back.
+enum Lit {
+    Animation(String),
+    Color([u8; 3]),
+}
 
 /// Refresh both Bluetooth device list and audio device list (called after BT operations).
 fn refresh_bt_and_audio(tx: &mpsc::Sender<StateUpdate>) {
@@ -59,6 +66,12 @@ fn main() {
         }
     };
 
+    // Load listen (double clap) settings and publish the raw mic stream locally
+    let mut listen_config = ListenConfig::load();
+    println!("Loaded listen config: {:?}", listen_config);
+    hardware::listen::set_sensitivity(listen_config.sensitivity);
+    hardware::listen::start_tap(hardware::listen::TAP_ADDR);
+
     // Channels: commands from WebSocket, state updates to WebSocket
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
     let (state_tx, state_rx) = mpsc::channel::<StateUpdate>();
@@ -85,9 +98,13 @@ fn main() {
     let mut hw_audio_active = false;
     let mut hw_audio_stop: Option<Arc<AtomicBool>> = None;
     let mut hw_audio_thread: Option<JoinHandle<()>> = None;
+    // The saved mic (listen_config.mic) is (re)opened when capture isn't running.
+    let mut next_mic_try = Instant::now();
 
     // Main loop: owns the LED strip, runs animations
     let mut active_animation: Option<String> = None;
+    let mut current_color: [u8; 3] = [0; 3];
+    let mut last_lit: Option<Lit> = None;
     let mut frame: usize = 0;
     let mut artnet_frame: usize = 0;
     let mut audio_bands: [u8; 8] = [0; 8];
@@ -102,6 +119,7 @@ fn main() {
             match cmd {
                 Command::SetColor { r, g, b } => {
                     active_animation = None;
+                    current_color = [r, g, b];
                     strip.set_all([r, g, b, 0]);
                     strip.render_calibrated(&calibration);
                     let state = strip.read_state();
@@ -110,11 +128,13 @@ fn main() {
                 Command::StartAnimation { name } => {
                     println!("Starting animation: {}", name);
                     active_animation = Some(name);
+                    current_color = [0; 3];
                     frame = 0;
                 }
                 Command::StopAnimation => {
                     println!("Stopping animation");
                     active_animation = None;
+                    current_color = [0; 3];
                     audio_bands = [0; 8];
                     strip.set_all([0, 0, 0, 0]);
                     strip.render_calibrated(&calibration);
@@ -193,6 +213,12 @@ fn main() {
                         Ok(handle) => {
                             hw_audio_thread = Some(handle);
                             hw_audio_active = true;
+                            if listen_config.mic != device_id {
+                                listen_config.mic = device_id.clone();
+                                if let Err(e) = listen_config.save() {
+                                    println!("Failed to save listen config: {}", e);
+                                }
+                            }
                             let _ = state_tx.send(StateUpdate::HardwareAudioStatus("started".to_string()));
                             println!("Hardware audio started on {}", device_id);
                         }
@@ -211,6 +237,13 @@ fn main() {
                         }
                     }
                     hw_audio_active = false;
+                    // Stopped on purpose: don't reopen it at boot.
+                    if !listen_config.mic.is_empty() {
+                        listen_config.mic.clear();
+                        if let Err(e) = listen_config.save() {
+                            println!("Failed to save listen config: {}", e);
+                        }
+                    }
                     let _ = state_tx.send(StateUpdate::HardwareAudioStatus("stopped".to_string()));
                     println!("Hardware audio stopped");
                 }
@@ -415,7 +448,60 @@ fn main() {
                 Command::GetArtNet => {
                     let _ = state_tx.send(StateUpdate::ArtNetData(artnet_config.to_json()));
                 }
+                Command::LightsOn | Command::LightsOff | Command::LightsToggle | Command::DoubleClap => {
+                    if matches!(cmd, Command::DoubleClap) {
+                        if !listen_config.clap {
+                            continue;
+                        }
+                        println!("Double clap: toggling lights");
+                    }
+                    let on = active_animation.is_some() || current_color != [0; 3];
+                    let turn_on = match cmd {
+                        Command::LightsOn => true,
+                        Command::LightsOff => false,
+                        _ => !on,
+                    };
+                    // Re-queued commands are handled later in this same drain loop.
+                    if turn_on && !on {
+                        let next = match last_lit.take() {
+                            Some(Lit::Color([r, g, b])) => Command::SetColor { r, g, b },
+                            Some(Lit::Animation(name)) => Command::StartAnimation { name },
+                            None => Command::StartAnimation { name: "rainbow".to_string() },
+                        };
+                        let _ = cmd_tx_clone.send(next);
+                    } else if !turn_on && on {
+                        last_lit = Some(match active_animation {
+                            Some(ref name) => Lit::Animation(name.clone()),
+                            None => Lit::Color(current_color),
+                        });
+                        let _ = cmd_tx_clone.send(Command::StopAnimation);
+                    }
+                }
+                Command::SetListen(params) => {
+                    if listen_config.apply_command(&params) {
+                        match listen_config.save() {
+                            Ok(_) => println!("Listen config saved: {:?}", listen_config),
+                            Err(e) => println!("Failed to save listen config: {}", e),
+                        }
+                    }
+                    let _ = state_tx.send(StateUpdate::ListenData(listen_config.to_json()));
+                }
+                Command::GetListen => {
+                    let _ = state_tx.send(StateUpdate::ListenData(listen_config.to_json()));
+                }
             }
+        }
+
+        // Keep the saved mic open: at boot, and again if capture died
+        // (device unplugged, or briefly held by PipeWire).
+        if !listen_config.mic.is_empty()
+            && hw_audio_thread.as_ref().map_or(true, |t| t.is_finished())
+            && Instant::now() >= next_mic_try
+        {
+            next_mic_try = Instant::now() + Duration::from_secs(5);
+            let _ = cmd_tx_clone.send(Command::StartHardwareAudio {
+                device_id: listen_config.mic.clone(),
+            });
         }
 
         // Run animation frame if active

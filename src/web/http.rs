@@ -23,6 +23,7 @@ const JS_KEYBOARD: &str = include_str!("../../static/js/keyboard.js");
 const JS_CHEATSHEET: &str = include_str!("../../static/js/cheatsheet.js");
 const JS_SHORTCUTS: &str = include_str!("../../static/js/shortcuts.js");
 const JS_ARTNET: &str = include_str!("../../static/js/artnet.js");
+const JS_LISTEN: &str = include_str!("../../static/js/listen.js");
 const JS_APP: &str = include_str!("../../static/js/app.js");
 
 fn serve(stream: &mut std::net::TcpStream, content_type: &str, body: &str) {
@@ -95,6 +96,7 @@ pub fn start(addr: &str) {
                     serve(&mut stream, "application/javascript", JS_SHORTCUTS)
                 }
                 "/js/artnet.js" => serve(&mut stream, "application/javascript", JS_ARTNET),
+                "/js/listen.js" => serve(&mut stream, "application/javascript", JS_LISTEN),
                 "/js/app.js" => serve(&mut stream, "application/javascript", JS_APP),
                 // SPA fallback: all other paths get index.html
                 _ => serve(&mut stream, "text/html", INDEX_HTML),

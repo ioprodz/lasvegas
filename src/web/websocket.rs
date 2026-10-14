@@ -107,6 +107,12 @@ pub fn start(
                         responder.send(Message::Text(msg.clone()));
                     }
                 }
+                StateUpdate::ListenData(json) => {
+                    let msg = format!("listen:{}", json);
+                    for responder in clients.values() {
+                        responder.send(Message::Text(msg.clone()));
+                    }
+                }
             }
         }
 
@@ -124,6 +130,8 @@ pub fn start(
                     let _ = cmd_tx.send(Command::NetList);
                     // Send current Art-Net config
                     let _ = cmd_tx.send(Command::GetArtNet);
+                    // Send current listen (clap) settings
+                    let _ = cmd_tx.send(Command::GetListen);
                 }
                 Event::Disconnect(client_id) => {
                     println!("Client #{} disconnected", client_id);
@@ -212,6 +220,16 @@ fn parse_command(text: &str) -> Option<Command> {
         ArtNetConfig::from_command(params).map(Command::SetArtNet)
     } else if text == "get_artnet" {
         Some(Command::GetArtNet)
+    } else if text == "lights:on" {
+        Some(Command::LightsOn)
+    } else if text == "lights:off" {
+        Some(Command::LightsOff)
+    } else if text == "lights:toggle" {
+        Some(Command::LightsToggle)
+    } else if let Some(params) = text.strip_prefix("listen:set:") {
+        Some(Command::SetListen(params.to_string()))
+    } else if text == "get_listen" {
+        Some(Command::GetListen)
     } else {
         None
     }

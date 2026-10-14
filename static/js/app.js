@@ -39,6 +39,10 @@ function handleWsMessage(event) {
             try {
                 applyArtNetFromServer(JSON.parse(event.data.slice('artnet:'.length)));
             } catch(e) { console.error('Failed to parse artnet:', e); }
+        } else if (event.data.startsWith('listen:')) {
+            try {
+                applyListenFromServer(JSON.parse(event.data.slice('listen:'.length)));
+            } catch(e) { console.error('Failed to parse listen:', e); }
         }
     }
 }

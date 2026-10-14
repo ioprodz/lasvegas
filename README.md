@@ -88,3 +88,17 @@ sudo ./target/release/lasvegas
 - All 360 LEDs are always set to the same color (no individual LED addressing exposed via WebSocket yet)
 - On connect, the server sends a `"test"` text message to the client
 - Initial LED color on startup: `[255, 0, 50, 0]` (reddish)
+
+## Listen: double clap and voice commands
+
+- **Double clap** (Listen page): clap twice to switch the lights off, twice
+  again to bring back what was showing. Uses the Pi's mic ("HW" audio source);
+  the chosen mic is saved in `listen.json` and reopened at boot. A steady beat
+  is ignored. Same as the WebSocket commands `lights:on`, `lights:off`,
+  `lights:toggle`; settings via `listen:set:<clap 0|1>,<sensitivity 1-10>`.
+- **Audio tap**: while the mic is open, the raw stream (S16_LE, 44.1 kHz,
+  mono) is re-published on `127.0.0.1:8081` for other programs on the Pi.
+- **Voice commands** (`ears/`): a separate Python service using Vosk offline
+  speech recognition with a fixed phrase list, all starting with "vegas":
+  "vegas lights on/off", "vegas rainbow", "vegas party mode", "vegas red", …
+  (see `ears/ears.py`). Install or update with `./ears/install.sh <pi-host>`.

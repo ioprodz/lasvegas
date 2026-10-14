@@ -10,6 +10,7 @@
 
 use crate::command::Command;
 use crate::hardware::audio_analysis::AudioPipeline;
+use crate::hardware::listen::{self, ClapDetector};
 use std::io::Read;
 use std::process::{Command as ProcessCommand, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -314,6 +315,7 @@ pub fn start_capture(
         );
 
         let mut pipeline = AudioPipeline::new(sample_rate as f32);
+        let mut claps = ClapDetector::new();
         let chunk_frames = 1024usize;
         let mut byte_buf = vec![0u8; chunk_frames * 2];
         let mut reader = std::io::BufReader::new(stdout);
@@ -325,6 +327,7 @@ pub fn start_capture(
                     break;
                 }
                 Ok(n) => {
+                    listen::tap_write(&byte_buf[..n]);
                     let sample_count = n / 2;
                     let samples: Vec<f32> = (0..sample_count)
                         .map(|i| {
@@ -333,6 +336,10 @@ pub fn start_capture(
                             (lo | hi) as f32 / 32768.0
                         })
                         .collect();
+
+                    if claps.push(&samples) && cmd_tx.send(Command::DoubleClap).is_err() {
+                        break;
+                    }
 
                     if let Some(analysis) = pipeline.push_samples(&samples) {
                         if cmd_tx.send(Command::ExtendedAudioData(analysis)).is_err() {

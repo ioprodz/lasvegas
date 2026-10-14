@@ -1,0 +1,18 @@
+[Unit]
+Description=Las Vegas voice commands (Vosk)
+After=lasvegas.service
+Wants=lasvegas.service
+
+[Service]
+Type=simple
+User=freeu
+WorkingDirectory=/home/freeu/ears
+ExecStart=/home/freeu/ears/venv/bin/python -u ears.py
+Restart=always
+RestartSec=5
+Nice=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

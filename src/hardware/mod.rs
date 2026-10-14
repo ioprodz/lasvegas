@@ -6,4 +6,5 @@ pub mod bluetooth;
 pub mod calibration;
 pub mod shortcuts;
 pub mod led;
+pub mod listen;
 pub mod network;

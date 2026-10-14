@@ -61,6 +61,9 @@
             <button class="nav-item" data-page="artnet">
                 <span class="icon">&#128161;</span> Art-Net
             </button>
+            <button class="nav-item" data-page="listen">
+                <span class="icon">&#128079;</span> Listen
+            </button>
 
             <div class="sidebar-footer">
                 <span class="hw-led" id="conn-led" aria-hidden="true"></span>
@@ -615,6 +618,30 @@
                     </div>
                 </div>
 
+                <!-- ===== Listen ===== -->
+                <div id="page-listen" class="page">
+                    <div class="content-header"><h2>Listen</h2></div>
+
+                    <div class="hw-panel">
+                        <div class="hw-label">Double clap</div>
+                        <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 0.75rem;">
+                            Clap twice to switch the lights off, and twice again to bring back what was
+                            showing. A steady beat in music is ignored.
+                        </p>
+                        <p id="listen-mic" style="font-size:0.85rem;margin:0 0 0.75rem;"></p>
+
+                        <div class="hw-field" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                            <input type="checkbox" id="listen-clap">
+                            <label for="listen-clap">Double clap toggles the lights</label>
+                        </div>
+
+                        <div class="hw-field" style="margin-bottom:0.75rem;">
+                            <label for="listen-sensitivity">Sensitivity: <span id="listen-sensitivity-value">5</span></label>
+                            <input type="range" id="listen-sensitivity" min="1" max="10" step="1" value="5">
+                        </div>
+                    </div>
+                </div>
+
             </div><!-- /.content -->
         </main>
 
@@ -680,6 +707,7 @@
     <script src="/js/cheatsheet.js"></script>
     <script src="/js/shortcuts.js"></script>
     <script src="/js/artnet.js"></script>
+    <script src="/js/listen.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html>
