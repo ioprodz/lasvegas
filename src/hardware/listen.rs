@@ -228,7 +228,16 @@ impl ClapDetector {
 
 // ── Audio tap ────────────────────────────────────────────────────────
 
-static TAP_CLIENTS: Mutex<Vec<TcpStream>> = Mutex::new(Vec::new());
+struct TapClient {
+    stream: TcpStream,
+    /// Bytes the socket didn't take yet (kept so samples stay aligned).
+    pending: Vec<u8>,
+}
+
+/// A reader more than ~2 s behind is dropped.
+const TAP_MAX_PENDING: usize = 44100 * 2 * 2;
+
+static TAP_CLIENTS: Mutex<Vec<TapClient>> = Mutex::new(Vec::new());
 
 /// Accept local listeners for the raw capture stream (background thread).
 pub fn start_tap(addr: &str) {
@@ -245,27 +254,43 @@ pub fn start_tap(addr: &str) {
         for stream in listener.incoming().flatten() {
             if stream.set_nonblocking(true).is_ok() {
                 println!("Audio tap: client connected on {}", addr);
-                TAP_CLIENTS.lock().unwrap().push(stream);
+                TAP_CLIENTS.lock().unwrap().push(TapClient { stream, pending: Vec::new() });
             }
         }
     });
 }
 
-/// Send raw PCM bytes to every tap client. A client that can't keep up
-/// (or a partial write, which would misalign samples) is disconnected.
+/// Send raw PCM bytes to every tap client. Whatever a socket doesn't take
+/// right away is queued; a client that falls ~2 s behind is disconnected.
 pub fn tap_write(bytes: &[u8]) {
     let mut clients = TAP_CLIENTS.lock().unwrap();
     if clients.is_empty() {
         return;
     }
-    clients.retain_mut(|c| match c.write(bytes) {
-        Ok(n) if n == bytes.len() => true,
-        Ok(_) => false,
-        Err(e) if e.kind() == ErrorKind::Interrupted => true,
-        Err(_) => {
-            println!("Audio tap: client disconnected");
-            false
+    clients.retain_mut(|c| {
+        c.pending.extend_from_slice(bytes);
+        while !c.pending.is_empty() {
+            match c.stream.write(&c.pending) {
+                Ok(0) => {
+                    println!("Audio tap: client closed the connection");
+                    return false;
+                }
+                Ok(n) => {
+                    c.pending.drain(..n);
+                }
+                Err(e) if e.kind() == ErrorKind::Interrupted => {}
+                Err(e) if e.kind() == ErrorKind::WouldBlock => break,
+                Err(e) => {
+                    println!("Audio tap: client disconnected ({})", e);
+                    return false;
+                }
+            }
         }
+        if c.pending.len() > TAP_MAX_PENDING {
+            println!("Audio tap: client too slow, disconnected");
+            return false;
+        }
+        true
     });
 }
 

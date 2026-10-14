@@ -5,8 +5,8 @@ Reads the raw mic stream that the LED server re-publishes on 127.0.0.1:8081
 Vosk (offline, small English model), and sends the matching command to the
 LED server's WebSocket (ws://127.0.0.1:8080).
 
-Every command starts with the wake word "vegas", e.g. "vegas rainbow",
-"vegas lights off", "vegas red".
+Every command starts with the wake phrase (default "dear lord"), e.g.
+"dear lord rainbow", "dear lord lights off", "dear lord red".
 """
 
 import base64
@@ -21,7 +21,7 @@ from vosk import KaldiRecognizer, Model, SetLogLevel
 TAP = ("127.0.0.1", 8081)
 WS = ("127.0.0.1", 8080)
 RATE = 44100
-WAKE = "vegas"
+WAKE = os.environ.get("EARS_WAKE", "dear lord")
 MODEL_DIR = os.environ.get("EARS_MODEL", os.path.join(os.path.dirname(__file__), "model"))
 # Vosk word confidence (0–1) every word of a phrase must reach.
 MIN_CONF = float(os.environ.get("EARS_MIN_CONF", "0.6"))

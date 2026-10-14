@@ -209,6 +209,10 @@ fn parse_arecord_device_line(line: &str) -> Option<AudioDevice> {
         .parse::<u32>()
         .ok()?;
 
+    // Card id ("C920" in "card 3: C920 [HD Pro Webcam C920], ..."): unlike the
+    // number, it stays the same when USB devices enumerate in another order.
+    let card_id = line.split(':').nth(1)?.trim().split(' ').next()?.to_string();
+
     let device_part = line.find(", device ")?;
     let after_device = &line[device_part + ", device ".len()..];
     let device_num = after_device
@@ -229,7 +233,7 @@ fn parse_arecord_device_line(line: &str) -> Option<AudioDevice> {
     };
 
     Some(AudioDevice {
-        id: format!("hw:{},{}", card_num, device_num),
+        id: format!("hw:CARD={},DEV={}", card_id, device_num),
         name,
     })
 }
@@ -244,7 +248,15 @@ pub fn start_capture(
     stop: Arc<AtomicBool>,
 ) -> Result<JoinHandle<()>, String> {
     let device_id = device_id.to_string();
-    let use_pw = !device_id.starts_with("hw:") && !device_id.starts_with("default");
+    let use_pw = !device_id.starts_with("hw:")
+        && !device_id.starts_with("plughw:")
+        && !device_id.starts_with("default");
+    // Open `hw:` devices through ALSA's plug layer so mics that only offer other
+    // formats (e.g. a webcam's 16 kHz stereo) are converted to 44.1 kHz mono.
+    let alsa_device = match device_id.strip_prefix("hw:") {
+        Some(rest) => format!("plughw:{}", rest),
+        None => device_id.clone(),
+    };
 
     let handle = thread::spawn(move || {
         let sample_rate = 44100u32;
@@ -276,7 +288,7 @@ pub fn start_capture(
             match ProcessCommand::new("arecord")
                 .args([
                     "-D",
-                    &device_id,
+                    &alsa_device,
                     "-f",
                     "S16_LE",
                     "-r",
