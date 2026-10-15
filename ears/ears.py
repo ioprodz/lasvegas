@@ -15,6 +15,8 @@ with a key that mini-pc only lets run poweroff/reboot. These have their own
 recognition confidence threshold (EARS_PC_MIN_CONF).
 
 "tv on" / "tv off" power the LG TV (see tv.py; Wake-on-LAN and its local API).
+"tv off" needs a high confidence (EARS_TV_OFF_MIN_CONF): the TV's own audio
+produced a false "tv off" at 0.80.
 """
 
 import base64
@@ -84,6 +86,7 @@ TEXT_COMMANDS = {
 
 
 TV_WAKE = os.environ.get("EARS_TV_WAKE", "tv")
+TV_OFF_MIN_CONF = float(os.environ.get("EARS_TV_OFF_MIN_CONF", "0.9"))
 
 PC_COMMANDS = {
     "start": "wake",
@@ -106,6 +109,15 @@ def phrases():
         + [f"{PC_WAKE} {p}" for p in PC_COMMANDS]
         + [f"{TV_WAKE} on", f"{TV_WAKE} off"]
     )
+
+
+def min_conf(text):
+    """Confidence a phrase needs: per-command overrides, else MIN_CONF."""
+    if text == f"{TV_WAKE} off":
+        return TV_OFF_MIN_CONF
+    if text.startswith(PC_WAKE + " "):
+        return PC_MIN_CONF
+    return MIN_CONF
 
 
 def wake_pc():
@@ -234,7 +246,7 @@ def listen(model):
                         continue
                     words = result.get("result", [])
                     conf = min((w.get("conf", 0) for w in words), default=0)
-                    if conf < (PC_MIN_CONF if text.startswith(PC_WAKE + " ") else MIN_CONF):
+                    if conf < min_conf(text):
                         log(f"Heard '{text}' (conf {conf:.2f}), ignored")
                         continue
                     try:
