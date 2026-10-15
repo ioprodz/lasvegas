@@ -13,6 +13,8 @@ alone toggles the lights.
 "mini pc shutdown" / "mini pc restart" power it off or reboot it over SSH
 with a key that mini-pc only lets run poweroff/reboot. These have their own
 recognition confidence threshold (EARS_PC_MIN_CONF).
+
+"tv on" / "tv off" power the LG TV (see tv.py; Wake-on-LAN and its local API).
 """
 
 import base64
@@ -25,6 +27,8 @@ import threading
 import time
 
 from vosk import KaldiRecognizer, Model, SetLogLevel
+
+import tv
 
 TAP = ("127.0.0.1", 8081)
 WS = ("127.0.0.1", 8080)
@@ -79,6 +83,8 @@ TEXT_COMMANDS = {
 }
 
 
+TV_WAKE = os.environ.get("EARS_TV_WAKE", "tv")
+
 PC_COMMANDS = {
     "start": "wake",
     "wake up": "wake",
@@ -98,6 +104,7 @@ def phrases():
         [WAKE]
         + [f"{WAKE} {p}" for p in [*TEXT_COMMANDS, *ANIMATIONS, *COLORS]]
         + [f"{PC_WAKE} {p}" for p in PC_COMMANDS]
+        + [f"{TV_WAKE} on", f"{TV_WAKE} off"]
     )
 
 
@@ -161,8 +168,24 @@ def ws_send(payload):
         time.sleep(0.05)
 
 
+def tv_off():
+    def run():
+        try:
+            tv.off()
+        except Exception as e:  # network, TLS or websockets errors: log, keep listening
+            log(f"TV off failed: {e!r}")
+
+    threading.Thread(target=run, daemon=True).start()
+
+
 def handle(text):
     """Map a recognised phrase to a command. Returns a description or None."""
+    if text == f"{TV_WAKE} on":
+        tv.wake()
+        return "tv wake"
+    if text == f"{TV_WAKE} off":
+        tv_off()
+        return "tv off"
     if text.startswith(PC_WAKE + " "):
         action = PC_COMMANDS.get(text[len(PC_WAKE) + 1:])
         if action == "wake":

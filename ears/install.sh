@@ -12,7 +12,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 
 echo "==> Copying files to ${PI_HOST}:${DIR}"
 ${SSH} "mkdir -p ${DIR}"
-scp -q "${HERE}/ears.py" "${HERE}/requirements.txt" "${HERE}/lasvegas-ears.service" "${PI_USER}@${PI_HOST}:${DIR}/"
+scp -q "${HERE}/ears.py" "${HERE}/tv.py" "${HERE}/requirements.txt" "${HERE}/lasvegas-ears.service" "${PI_USER}@${PI_HOST}:${DIR}/"
 
 echo "==> Python environment"
 ${SSH} "test -x ${DIR}/venv/bin/python || python3 -m venv ${DIR}/venv"
