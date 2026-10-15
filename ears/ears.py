@@ -8,13 +8,20 @@ LED server's WebSocket (ws://127.0.0.1:8080).
 Every command starts with the wake phrase (default "room light"), e.g.
 "room light rainbow", "room light off", "room light red". The wake phrase
 alone toggles the lights.
+
+"mini pc start" wakes the mini-pc desktop (Wake-on-LAN magic packet);
+"mini pc shutdown" / "mini pc restart" power it off or reboot it over SSH
+with a key that mini-pc only lets run poweroff/reboot. These have their own
+recognition confidence threshold (EARS_PC_MIN_CONF).
 """
 
 import base64
 import json
 import os
 import socket
+import subprocess
 import sys
+import threading
 import time
 
 from vosk import KaldiRecognizer, Model, SetLogLevel
@@ -26,6 +33,12 @@ WAKE = os.environ.get("EARS_WAKE", "room light")
 MODEL_DIR = os.environ.get("EARS_MODEL", os.path.join(os.path.dirname(__file__), "model"))
 # Vosk word confidence (0–1) every word of a phrase must reach.
 MIN_CONF = float(os.environ.get("EARS_MIN_CONF", "0.6"))
+
+PC_WAKE = os.environ.get("EARS_PC_WAKE", "mini pc")
+PC_HOST = os.environ.get("EARS_PC_HOST", "osminosm@mini-pc.local")
+PC_MAC = os.environ.get("EARS_PC_MAC", "38:05:25:30:31:d0")
+PC_KEY = os.path.expanduser(os.environ.get("EARS_PC_KEY", "~/.ssh/minipc_power"))
+PC_MIN_CONF = float(os.environ.get("EARS_PC_MIN_CONF", "0.55"))
 
 ANIMATIONS = {
     "rainbow": "rainbow",
@@ -66,12 +79,54 @@ TEXT_COMMANDS = {
 }
 
 
+PC_COMMANDS = {
+    "start": "wake",
+    "wake up": "wake",
+    "shutdown": "poweroff",
+    "shut down": "poweroff",
+    "restart": "reboot",
+    "reboot": "reboot",
+}
+
+
 def log(*args):
     print(*args, flush=True)
 
 
 def phrases():
-    return [WAKE] + [f"{WAKE} {p}" for p in [*TEXT_COMMANDS, *ANIMATIONS, *COLORS]]
+    return (
+        [WAKE]
+        + [f"{WAKE} {p}" for p in [*TEXT_COMMANDS, *ANIMATIONS, *COLORS]]
+        + [f"{PC_WAKE} {p}" for p in PC_COMMANDS]
+    )
+
+
+def wake_pc():
+    """Broadcast a Wake-on-LAN magic packet for mini-pc's Ethernet port."""
+    mac = bytes.fromhex(PC_MAC.replace(":", ""))
+    packet = b"\xff" * 6 + mac * 16
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        s.sendto(packet, ("255.255.255.255", 9))
+
+
+def power_pc(action):
+    """Ask mini-pc to power off or reboot; runs in the background and logs."""
+
+    def run():
+        try:
+            r = subprocess.run(
+                ["ssh", "-i", PC_KEY, "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+                 "-o", "HostKeyAlias=mini-pc", PC_HOST, action],
+                capture_output=True, text=True, timeout=20,
+            )
+            # A poweroff/reboot may drop the connection (exit 255): that's success.
+            if r.returncode not in (0, 255) or "denied" in r.stderr.lower():
+                log(f"mini-pc {action} failed ({r.returncode}): {r.stderr.strip()}")
+        except (OSError, subprocess.TimeoutExpired) as e:
+            log(f"mini-pc {action} failed: {e}")
+
+    threading.Thread(target=run, daemon=True).start()
 
 
 def ws_send(payload):
@@ -108,6 +163,15 @@ def ws_send(payload):
 
 def handle(text):
     """Map a recognised phrase to a command. Returns a description or None."""
+    if text.startswith(PC_WAKE + " "):
+        action = PC_COMMANDS.get(text[len(PC_WAKE) + 1:])
+        if action == "wake":
+            wake_pc()
+            return "mini-pc wake"
+        if action:
+            power_pc(action)
+            return f"mini-pc {action}"
+        return None
     if text == WAKE:
         ws_send("lights:toggle")
         return "lights:toggle"
@@ -147,7 +211,7 @@ def listen(model):
                         continue
                     words = result.get("result", [])
                     conf = min((w.get("conf", 0) for w in words), default=0)
-                    if conf < MIN_CONF:
+                    if conf < (PC_MIN_CONF if text.startswith(PC_WAKE + " ") else MIN_CONF):
                         log(f"Heard '{text}' (conf {conf:.2f}), ignored")
                         continue
                     try:
