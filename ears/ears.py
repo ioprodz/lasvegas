@@ -15,7 +15,9 @@ with a key that mini-pc only lets run poweroff/reboot. These have their own
 recognition confidence threshold (EARS_PC_MIN_CONF).
 
 "tv on" / "tv off" power the LG TV (see tv.py; Wake-on-LAN and its local API).
-"tv off" needs a high confidence (EARS_TV_OFF_MIN_CONF): the TV's own audio
+"tv youtube|netflix|jellyfin" opens an app (turning the TV on first);
+"tv play|pause|stop|rewind|forward" control playback. Every TV command but
+"tv on" needs a high confidence (EARS_TV_MIN_CONF): the TV's own audio
 produced a false "tv off" at 0.80.
 """
 
@@ -86,7 +88,25 @@ TEXT_COMMANDS = {
 
 
 TV_WAKE = os.environ.get("EARS_TV_WAKE", "tv")
-TV_OFF_MIN_CONF = float(os.environ.get("EARS_TV_OFF_MIN_CONF", "0.9"))
+TV_MIN_CONF = float(os.environ.get("EARS_TV_MIN_CONF", "0.9"))
+
+TV_APPS = {
+    "youtube": "youtube.leanback.v4",
+    "you tube": "youtube.leanback.v4",
+    "netflix": "netflix",
+    "jelly fin": "org.jellyfin.webos",
+    "jelly": "org.jellyfin.webos",
+}
+
+TV_MEDIA = {
+    "play": "play",
+    "resume": "play",
+    "pause": "pause",
+    "stop": "stop",
+    "rewind": "rewind",
+    "forward": "fastForward",
+    "fast forward": "fastForward",
+}
 
 PC_COMMANDS = {
     "start": "wake",
@@ -107,14 +127,14 @@ def phrases():
         [WAKE]
         + [f"{WAKE} {p}" for p in [*TEXT_COMMANDS, *ANIMATIONS, *COLORS]]
         + [f"{PC_WAKE} {p}" for p in PC_COMMANDS]
-        + [f"{TV_WAKE} on", f"{TV_WAKE} off"]
+        + [f"{TV_WAKE} {p}" for p in ["on", "off", *TV_APPS, *TV_MEDIA]]
     )
 
 
 def min_conf(text):
     """Confidence a phrase needs: per-command overrides, else MIN_CONF."""
-    if text == f"{TV_WAKE} off":
-        return TV_OFF_MIN_CONF
+    if text.startswith(TV_WAKE + " ") and text != f"{TV_WAKE} on":
+        return TV_MIN_CONF
     if text.startswith(PC_WAKE + " "):
         return PC_MIN_CONF
     return MIN_CONF
@@ -180,12 +200,14 @@ def ws_send(payload):
         time.sleep(0.05)
 
 
-def tv_off():
+def background(label, fn, *args):
+    """Run a TV call without blocking the listener; log failures."""
+
     def run():
         try:
-            tv.off()
+            fn(*args)
         except Exception as e:  # network, TLS or websockets errors: log, keep listening
-            log(f"TV off failed: {e!r}")
+            log(f"{label} failed: {e!r}")
 
     threading.Thread(target=run, daemon=True).start()
 
@@ -196,8 +218,16 @@ def handle(text):
         tv.wake()
         return "tv wake"
     if text == f"{TV_WAKE} off":
-        tv_off()
+        background("tv off", tv.off)
         return "tv off"
+    if text.startswith(TV_WAKE + " "):
+        what = text[len(TV_WAKE) + 1:]
+        if what in TV_APPS:
+            background(f"tv launch {TV_APPS[what]}", tv.launch, TV_APPS[what])
+            return f"tv launch {TV_APPS[what]}"
+        if what in TV_MEDIA:
+            background(f"tv {TV_MEDIA[what]}", tv.media, TV_MEDIA[what])
+            return f"tv {TV_MEDIA[what]}"
     if text.startswith(PC_WAKE + " "):
         action = PC_COMMANDS.get(text[len(PC_WAKE) + 1:])
         if action == "wake":
